@@ -27,7 +27,8 @@
 !#                                                                             #
 !# Created August 2011                                                         #
 !#                                                                             #
-!#  Track changes on GitHub @ https://github.com/AquaticEcoDynamics/libaed-water
+!#  Track changes on GitHub @                                                  #
+!#           https://github.com/AquaticEcoDynamics/libaed-water                #
 !#                                                                             #
 !###############################################################################
 !                                                                              !
@@ -152,6 +153,13 @@ INTEGER FUNCTION load_csv(dbase,pd)
       RETURN !# No file found
    ENDIF
 
+   !# default values for some
+   pd%c1           = 0.1240/60.   ! From Chung et al (2014)
+   pd%c3           = 0.0230/60.   !  "
+   pd%f1           = 0.675        ! Ross and Sharples (2007)
+   pd%f2           = 0.750        !  "
+   pd%d_phy        = 1e-5
+
    ALLOCATE(values(nccols))
 
    DO WHILE ( aed_csv_read_row(unit, values) )
@@ -207,6 +215,12 @@ INTEGER FUNCTION load_csv(dbase,pd)
             CASE ('Si_0')          ; pd(dcol)%Si_0          = extract_double(values(ccol))
             CASE ('K_Si')          ; pd(dcol)%K_Si          = extract_double(values(ccol))
             CASE ('X_sicon')       ; pd(dcol)%X_sicon       = extract_double(values(ccol))
+
+            CASE ('c1')            ; pd(dcol)%c1            = extract_double(values(ccol))
+            CASE ('c3')            ; pd(dcol)%c3            = extract_double(values(ccol))
+            CASE ('f1')            ; pd(dcol)%f1            = extract_double(values(ccol))
+            CASE ('f2')            ; pd(dcol)%f2            = extract_double(values(ccol))
+            CASE ('d_phy')         ; pd(dcol)%d_phy         = extract_double(values(ccol))
 
             CASE DEFAULT ; print *, 'Unknown row "', TRIM(name), '"'
          END SELECT
@@ -344,12 +358,12 @@ SUBROUTINE aed_phytoplankton_load_params(data, dbase, count, list, settling, res
        data%phytos(i)%Si_0         = pd(list(i))%Si_0
        data%phytos(i)%K_Si         = pd(list(i))%K_Si
        data%phytos(i)%X_sicon      = pd(list(i))%X_sicon
-       ! Hardocoded parameter values
-       data%phytos(i)%c1           = 0.1240/60.   ! From Chung et al (2014)
-       data%phytos(i)%c3           = 0.0230/60.   !  "
-       data%phytos(i)%f1           = 0.675        ! Ross and Sharples (2007)
-       data%phytos(i)%f2           = 0.750        !  "
-       data%phytos(i)%d_phy        = 1e-5
+
+       data%phytos(i)%c1           = pd(list(i))%c1
+       data%phytos(i)%c3           = pd(list(i))%c3
+       data%phytos(i)%f1           = pd(list(i))%f1
+       data%phytos(i)%f2           = pd(list(i))%f2
+       data%phytos(i)%d_phy        = pd(list(i))%d_phy
 
        ! Register group as a state variable
        data%id_p(i) = aed_define_variable(                                     &
@@ -707,9 +721,9 @@ SUBROUTINE aed_define_phytoplankton(data, namlst)
    ! Register benthic phyto diagnostic variables
    IF(do_mpb>0) THEN
      data%id_d_MPB = aed_define_sheet_diag_variable('mpb_ben','mmol C/m2'  ,'microphytobenthos density')
-     data%id_d_BPP = aed_define_sheet_diag_variable('gpp_ben','mmol C/m2/d','benthic gross productivity')
-     data%id_d_BCP = aed_define_sheet_diag_variable('ncp_ben','mmol C/m2/d','benthic net productivity')
-     data%id_d_mpbv= aed_define_sheet_diag_variable('swi_mpb','mmol C/m2/d','mpb vertical exchange')
+     data%id_d_BPP = aed_define_sheet_diag_variable('mpb_gpp','mmol C/m2/d','benthic gross productivity')
+     data%id_d_BCP = aed_define_sheet_diag_variable('mpb_rsp','mmol C/m2/d','benthic phyto respiration')
+     data%id_d_mpbv= aed_define_sheet_diag_variable('mpb_swi','mmol C/m2/d','mpb vertical exchange')
    ENDIF
 
    ! Register environmental dependencies
@@ -1236,12 +1250,13 @@ SUBROUTINE aed_calculate_benthic_phytoplankton(data,column,layer_idx)
    IF ( data%do_mpb>0 ) THEN
      ! Get local conditions
      matz = _STATE_VAR_S_(data%id_sedzone)  ! local benthic type
-     mpb  = _STATE_VAR_S_(data%id_mpb)      ! local mpb density
      Io   = _STATE_VAR_S_(data%id_I_0)      ! surface short wave radiation
      temp = _STATE_VAR_(data%id_tem)        ! local temperature
      extc = _STATE_VAR_(data%id_extc)       ! cell extinction
      par  = _STATE_VAR_(data%id_par)        ! local photosynt. active radiation
      dz   = _STATE_VAR_(data%id_dz)         ! cell depth
+     mpb  = _STATE_VAR_S_(data%id_mpb)      ! local mpb density
+     IF(data%do_mpb==2) mpb  = _DIAG_VAR_S_(data%id_d_mpb)
 
      ! Get sedimentation flux (mmmol/m2/d) loss into the benthos (diagnostic was set in mobility)
      Psed_phy = _DIAG_VAR_(data%id_Psed_phy)
@@ -1253,7 +1268,7 @@ SUBROUTINE aed_calculate_benthic_phytoplankton(data,column,layer_idx)
      mpb_flux = (mpb_prod-mpb_resp)*mpb
 
      ! Update the MPB biomass, include net production and add sedimented phytos (mmolC/m2/s)
-     _FLUX_VAR_B_(data%id_mpb) = _FLUX_VAR_B_(data%id_mpb) + mpb_flux + (-Psed_phy/secs_per_day)
+     IF(data%do_mpb/=2) _FLUX_VAR_B_(data%id_mpb) = _FLUX_VAR_B_(data%id_mpb) + mpb_flux + (-Psed_phy/secs_per_day)
 
      ! log this uptake into the bulk community GPP/NCP diagnostics (mmolC/m3/d)
      _DIAG_VAR_(data%id_GPP) =  _DIAG_VAR_(data%id_GPP) + (mpb_prod/dz) * mpb * secs_per_day
@@ -1261,19 +1276,19 @@ SUBROUTINE aed_calculate_benthic_phytoplankton(data,column,layer_idx)
 
      ! Update flux terms for other O2, CO2 and nutrient fluxes (mmolO2/m2/s)
      IF (data%do_DOuptake) THEN
-        _FLUX_VAR_(data%id_DOupttarget) = _FLUX_VAR_(data%id_DOupttarget) + mpb_flux
+        IF(data%do_mpb/=2)_FLUX_VAR_(data%id_DOupttarget) = _FLUX_VAR_(data%id_DOupttarget) + mpb_flux
      ENDIF
      IF (data%do_Cuptake) THEN
-        _FLUX_VAR_(data%id_Cupttarget) = _FLUX_VAR_(data%id_Cupttarget) - mpb_flux
+        IF(data%do_mpb/=2)_FLUX_VAR_(data%id_Cupttarget) = _FLUX_VAR_(data%id_Cupttarget) - mpb_flux
         ! log this uptake into the bulk community C uptake diagnostic
         _DIAG_VAR_(data%id_CUP) = _DIAG_VAR_(data%id_CUP) - (mpb_flux/dz) * secs_per_day
      ENDIF
      ! A quick and dirty nutrient uptake by MPB; needs cleaning to account for limitation and excretion of DOM
      IF (data%do_Nuptake) THEN
         ! increment flux from bottom cell nutrient amount (mmol N/m2/s)
-        _FLUX_VAR_(data%id_Nupttarget(1)) = &
+        IF(data%do_mpb/=2)_FLUX_VAR_(data%id_Nupttarget(1)) = &
                            _FLUX_VAR_(data%id_Nupttarget(1)) - mpb_flux * (16./106.) *0.5
-        _FLUX_VAR_(data%id_Nupttarget(2)) = &
+        IF(data%do_mpb/=2)_FLUX_VAR_(data%id_Nupttarget(2)) = &
                            _FLUX_VAR_(data%id_Nupttarget(2)) - mpb_flux * (16./106.) *0.5
         ! log this uptake into the bulk community N uptake diagnostic (mmol N/m3/d)
         _DIAG_VAR_(data%id_NUP1)= _DIAG_VAR_(data%id_NUP1)- (mpb_flux/dz) * (16./106.) *0.5 * secs_per_day
@@ -1281,7 +1296,7 @@ SUBROUTINE aed_calculate_benthic_phytoplankton(data,column,layer_idx)
      ENDIF
      IF (data%do_Puptake) THEN
         ! increment flux from bottom cell nutrient (po4) amount (mmol P/m2/s)
-        _FLUX_VAR_(data%id_Pupttarget(1)) = _FLUX_VAR_(data%id_Pupttarget(1)) - mpb_flux * (1./106.)
+        IF(data%do_mpb/=2)_FLUX_VAR_(data%id_Pupttarget(1)) = _FLUX_VAR_(data%id_Pupttarget(1)) - mpb_flux * (1./106.)
         ! log this uptake into the bulk community P uptake diagnostic (mmol P/m3/d)
         _DIAG_VAR_(data%id_PUP) = _DIAG_VAR_(data%id_PUP) - mpb_flux * (1./106.) * secs_per_day
      ENDIF
@@ -1294,7 +1309,7 @@ SUBROUTINE aed_calculate_benthic_phytoplankton(data,column,layer_idx)
          phy_sed_frac = SUM(data%resuspension(1:data%num_phytos))
          Fsed_phy = _DIAG_VAR_S_(data%id_l_resus) * phy_sed_frac
 
-         _FLUX_VAR_B_(data%id_mpb) = _FLUX_VAR_B_(data%id_mpb) - Fsed_phy
+         IF(data%do_mpb/=2)_FLUX_VAR_B_(data%id_mpb) = _FLUX_VAR_B_(data%id_mpb) - Fsed_phy
 
          IF( phy_sed_frac > zero_ ) THEN
           DO phy_i=1,data%num_phytos
@@ -1324,9 +1339,9 @@ SUBROUTINE aed_calculate_benthic_phytoplankton(data,column,layer_idx)
      ENDIF
 
      ! Update the diagnostic variables (mmol C/m2/d)
-     _DIAG_VAR_S_(data%id_d_mpb) = mpb
+     IF(data%do_mpb/=2) _DIAG_VAR_S_(data%id_d_mpb) = mpb
      _DIAG_VAR_S_(data%id_d_bpp) =      (mpb_prod) * mpb * secs_per_day
-     _DIAG_VAR_S_(data%id_d_bcp) =              mpb_flux * secs_per_day
+     _DIAG_VAR_S_(data%id_d_bcp) =      (mpb_resp) * mpb * secs_per_day
      _DIAG_VAR_S_(data%id_d_mpbv)= -Psed_phy - (Fsed_phy * secs_per_day)
      _DIAG_VAR_S_(data%id_d_res) =              Fsed_phy * secs_per_day
    ENDIF
