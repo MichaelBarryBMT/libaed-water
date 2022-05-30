@@ -380,7 +380,7 @@ SUBROUTINE aed_define_sedflux(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_sedflux configuration"
+   ! BMT print *,"        aed_sedflux configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_sedflux,iostat=status)

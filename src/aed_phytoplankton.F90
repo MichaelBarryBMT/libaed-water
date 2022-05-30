@@ -222,7 +222,7 @@ INTEGER FUNCTION load_csv(dbase,pd)
             CASE ('f2')            ; pd(dcol)%f2            = extract_double(values(ccol))
             CASE ('d_phy')         ; pd(dcol)%d_phy         = extract_double(values(ccol))
 
-            CASE DEFAULT ; print *, 'Unknown row "', TRIM(name), '"'
+            CASE DEFAULT ; ! BMT print *, 'Unknown row "', TRIM(name), '"'
          END SELECT
       ENDDO
    ENDDO
@@ -262,14 +262,14 @@ SUBROUTINE aed_phytoplankton_load_params(data, dbase, count, list, settling, res
        CASE (CSV_TYPE)
            status = load_csv(dbase, pd)
        CASE (NML_TYPE)
-           print*,"nml format parameter file is deprecated. Please update to CSV format"
+           ! BMT print*,"nml format parameter file is deprecated. Please update to CSV format"
            tfil = find_free_lun()
            open(tfil,file=dbase, status='OLD',iostat=status)
            IF (status /= 0) STOP 'Cannot open phyto_data namelist file'
            read(tfil,nml=phyto_data,iostat=status)
            close(tfil)
        CASE DEFAULT
-           print *,'Unknown file type "',TRIM(dbase),'"'; status=1
+           ! BMT print *,'Unknown file type "',TRIM(dbase),'"'; status=1
     END SELECT
     IF (status /= 0) STOP 'Error reading namelist phyto_data'
 
@@ -406,7 +406,7 @@ SUBROUTINE aed_phytoplankton_load_params(data, dbase, count, list, settling, res
        ELSE
          IF (data%phytos(i)%settling == _MOB_MOTILE_) THEN
              data%phytos(i)%settling = _MOB_CONST_
-             print *,'Motility can not be simulated as no IN'
+             ! BMT print *,'Motility can not be simulated as no IN'
          ENDIF
        ENDIF
 
@@ -562,7 +562,7 @@ SUBROUTINE aed_define_phytoplankton(data, namlst)
                     phyto_particle_link
 !-----------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_phytoplankton configuration"
+   ! BMT print *,"        aed_phytoplankton configuration"
 
    ! Read the namelist, and set module parameters
    read(namlst,nml=aed_phytoplankton,iostat=status)

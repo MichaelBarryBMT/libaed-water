@@ -183,9 +183,9 @@ SUBROUTINE aed_define_model(modeldef, namlst)
 
       ! report the outcome of special tokens/flags that were set
       IF(model%aed_model_zone_avg) THEN
-        print *,'          ******************************* '
-        print *,'          module ', TRIM(modelname),' : configured for zone_averaging '
-        print *,'          ******************************* '
+        ! BMT print *,'          ******************************* '
+        ! BMT print *,'          module ', TRIM(modelname),' : configured for zone_averaging '
+        ! BMT print *,'          ******************************* '
       ENDIF
 
       IF ( .NOT. ASSOCIATED(model_list) ) model_list => model

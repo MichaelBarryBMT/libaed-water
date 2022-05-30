@@ -157,7 +157,7 @@ SUBROUTINE aed_define_tracer(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_tracer configuration"
+   ! BMT print *,"        aed_tracer configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_tracer,iostat=status)

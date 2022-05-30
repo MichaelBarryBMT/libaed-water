@@ -170,7 +170,7 @@ INTEGER FUNCTION load_csv(dbase, zoop_param)
             CASE ('prey(3)%zoop_prey') ; CALL copy_name(values(ccol), zoop_param(dcol)%prey(3)%zoop_prey)
             CASE ('prey(3)%Pzoo_prey') ; zoop_param(dcol)%prey(3)%Pzoo_prey = extract_double(values(ccol))
 
-            CASE DEFAULT ; print *, 'Unknown row "', TRIM(name), '"'
+            CASE DEFAULT ; ! BMT print *, 'Unknown row "', TRIM(name), '"'
          END SELECT
       ENDDO
    ENDDO
@@ -209,14 +209,14 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
        CASE (CSV_TYPE)
            status = load_csv(dbase, zoop_param)
        CASE (NML_TYPE)
-           print*,"nml format parameter file is deprecated. Please update to CSV format"
+           ! BMT print*,"nml format parameter file is deprecated. Please update to CSV format"
            tfil = find_free_lun()
            open(tfil,file=dbase, status='OLD',iostat=status)
            IF (status /= 0) STOP 'Error opening zoop_params namelist file'
            read(tfil,nml=zoop_params,iostat=status)
            close(tfil)
        CASE DEFAULT
-           print *,'Unknown file type "',TRIM(dbase),'"'; status=1
+           ! BMT print *,'Unknown file type "',TRIM(dbase),'"'; status=1
     END SELECT
     IF (status /= 0) STOP 'Error reading namelist zoop_params'
 
@@ -320,7 +320,7 @@ SUBROUTINE aed_define_zooplankton(data, namlst)
                     dbase, simZoopFeedback, diag_level
 !-----------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_zooplankton configuration"
+   ! BMT print *,"        aed_zooplankton configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_zooplankton,iostat=status)

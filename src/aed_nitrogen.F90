@@ -213,7 +213,7 @@ SUBROUTINE aed_define_nitrogen(data, namlst)
 !
 !------------------------------------------------------------------------------+
 !BEGIN
-   print *,"        aed_nitrogen configuration"
+   ! BMT print *,"        aed_nitrogen configuration"
 
    !---------------------------------------------------------------------------+
    ! Read the namelist

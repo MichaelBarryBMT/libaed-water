@@ -126,7 +126,7 @@ SUBROUTINE aed_define_silica(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_silica configuration"
+   ! BMT print *,"        aed_silica configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_silica,iostat=status)

@@ -198,7 +198,7 @@ SUBROUTINE aed_define_carbon(data, namlst)
 
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_carbon configuration"
+   ! BMT print *,"        aed_carbon configuration"
 
    !# Set defaults
    data%simDIC        = .false.

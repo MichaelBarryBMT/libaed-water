@@ -180,8 +180,8 @@ SUBROUTINE aed_define_geochemistry(data, namlst)
                     ph_link, pco2_link, diag_level
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_geochemistry configuration"
-   print *,"         WARNING! aed_geochemistry model is under development"
+   ! BMT print *,"        aed_geochemistry configuration"
+   ! BMT print *,"         WARNING! aed_geochemistry model is under development"
 
    ! MH:JOBS
    ! remove pe

@@ -538,7 +538,7 @@ INTEGER FUNCTION aed_csv_read_header(fname, names, ncols)
    unit = 0
 
    IF ( .NOT. init_parser(fname, aedr) ) THEN
-      print*, "Failed to open file '",fname,"'"
+      ! BMT print*, "Failed to open file '",fname,"'"
       aed_csv_read_header = -1
       RETURN
    ENDIF

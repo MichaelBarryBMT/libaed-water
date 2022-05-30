@@ -638,8 +638,8 @@ SUBROUTINE aed_bio_temp_function(numg, theta, T_std, T_opt, T_max, aTn, bTn, kTn
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-    write(*,"(11X,'Solving temperature functions for phytoplankton - ')")
-    write(*,"(11X,' using the form : f(T) = v^(T-20)-v^(k(T-a))+b')")
+    ! BMT write(*,"(11X,'Solving temperature functions for phytoplankton - ')")
+    ! BMT write(*,"(11X,' using the form : f(T) = v^(T-20)-v^(k(T-a))+b')")
 
     tol   = 0.05
 
@@ -743,7 +743,7 @@ SUBROUTINE aed_bio_temp_function(numg, theta, T_std, T_opt, T_max, aTn, bTn, kTn
       ENDIF
 
       IF (kTn(group) < 0.1 .AND. bTn(group) > 100.0) THEN
-         print *,'Cannot solve for fT for: ', name(group)
+         ! BMT print *,'Cannot solve for fT for: ', name(group)
          STOP
       ENDIF
 

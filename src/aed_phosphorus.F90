@@ -173,7 +173,7 @@ SUBROUTINE aed_define_phosphorus(data, namlst)
 !
 !------------------------------------------------------------------------------+
 !BEGIN
-   print *,"        aed_phosphorus configuration"
+   ! BMT print *,"        aed_phosphorus configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_phosphorus,iostat=status)
@@ -218,23 +218,23 @@ SUBROUTINE aed_define_phosphorus(data, namlst)
    ! Check if particles and PO4 adsorption are simulated
    IF (data%simPO4Adsorption) THEN
      IF (data%ads_use_external_tss) THEN
-         PRINT *,'        PO4 adsorption is configured to use external TSS var'
+         ! BMT PRINT *,'        PO4 adsorption is configured to use external TSS var'
          data%id_tssext = aed_locate_global('tss')
      ELSE
        IF (po4sorption_target_variable .NE. '' ) THEN
-          print *,'          PO4 is adsorbing to ',TRIM(po4sorption_target_variable)
-          print *,'          ... found'
+          ! BMT print *,'          PO4 is adsorbing to ',TRIM(po4sorption_target_variable)
+          ! BMT print *,'          ... found'
           data%id_tss = aed_locate_variable(po4sorption_target_variable)
           IF(w_po4ads<-999.) THEN
-            print *,'          Checking for associated _vvel link array ',TRIM(po4sorption_target_variable)//'_vvel'
+            ! BMT print *,'          Checking for associated _vvel link array ',TRIM(po4sorption_target_variable)//'_vvel'
             data%id_frpads_vvel = aed_locate_variable(TRIM(po4sorption_target_variable)//'_vvel')
-            print *,'          ... found'
+            ! BMT print *,'          ... found'
             data%w_po4ads = zero_
           ELSE
-            PRINT *,'  ERROR PO4 adsorption vvel link variable not found even though w_po4ads specifies link'
+            ! BMT PRINT *,'  ERROR PO4 adsorption vvel link variable not found even though w_po4ads specifies link'
           ENDIF
        ELSE
-          PRINT *,'  ERROR PO4 adsorption is configured but no internal or external target variable is set'
+          ! BMT PRINT *,'  ERROR PO4 adsorption is configured but no internal or external target variable is set'
           STOP
        ENDIF
      ENDIF

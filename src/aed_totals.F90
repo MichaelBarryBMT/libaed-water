@@ -153,7 +153,7 @@ SUBROUTINE aed_define_totals(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_totals configuration"
+   ! BMT print *,"        aed_totals configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_totals,iostat=status)

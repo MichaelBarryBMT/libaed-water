@@ -315,7 +315,7 @@ SUBROUTINE aed_define_organic_matter(data, namlst)
 
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_organic_matter configuration"
+   ! BMT print *,"        aed_organic_matter configuration"
 
    ! Default parameters set above at declaration
 

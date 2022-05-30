@@ -202,7 +202,7 @@ SUBROUTINE aed_define_pathogens(data, namlst)
 
 !-----------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_pathogens configuration"
+   ! BMT print *,"        aed_pathogens configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_pathogens,iostat=status)
@@ -376,14 +376,14 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
        CASE (CSV_TYPE)
            status = load_csv(dbase, pd)
        CASE (NML_TYPE)
-           print*,"nml format parameter file is deprecated. Please update to CSV format"
+           ! BMT print*,"nml format parameter file is deprecated. Please update to CSV format"
            tfil = find_free_lun()
            open(tfil,file=dbase, status='OLD',iostat=status)
            IF (status /= 0) STOP 'Error opening namelist pathogen_data'
            read(tfil,nml=pathogen_data,iostat=status)
            close(tfil)
        CASE DEFAULT
-           print *,'Unknown file type "',TRIM(dbase),'"'; status=1
+           ! BMT print *,'Unknown file type "',TRIM(dbase),'"'; status=1
     END SELECT
     IF (status /= 0) STOP 'Error reading namelist pathogen_data'
 

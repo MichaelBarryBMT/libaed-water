@@ -176,7 +176,7 @@ SUBROUTINE aed_define_noncohesive(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_noncohesive configuration"
+   ! BMT print *,"        aed_noncohesive configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_noncohesive,iostat=status)

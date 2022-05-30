@@ -422,12 +422,12 @@ CONTAINS
    molWgtH2O = 0.0180160000
 
    IF(verbosity > 0) THEN
-     print *,'  Aqueous Species List: ----------'
+     ! BMT print *,'  Aqueous Species List: ----------'
      DO i = 1,nSpecies
-       PRINT *,'   Species:',i, TRIM(allSpecies(i)%Name),': ',                 &
-                                INT(allSpecies(i)%Stoich)
+       ! BMT PRINT *,'   Species:',i, TRIM(allSpecies(i)%Name),': ',                 &
+                   ! BMT              INT(allSpecies(i)%Stoich)
      END DO
-     print *,'--------------------------------'
+     ! BMT print *,'--------------------------------'
      IF(verbosity > 2) THEN
        CALL outputSpeciesData(allSpecies)
      END IF
@@ -595,8 +595,8 @@ CONTAINS
 
      IF(verbosity > 2) THEN
        DO componentIndex = 1,nComps2Process
-         print *,'After Aq Stage',allcomponents(componentIndex)%CompName,      &
-         allcomponents(componentIndex)%Total,allcomponents(componentIndex)%Value
+         ! BMT print *,'After Aq Stage',allcomponents(componentIndex)%CompName,      &
+        ! BMT  allcomponents(componentIndex)%Total,allcomponents(componentIndex)%Value
        END DO
      END IF
 
@@ -739,10 +739,10 @@ CONTAINS
        iter = iter + 1
 
        IF (verbosity > 10) THEN
-         print *,'Beginning set iteration: ',iter
+         ! BMT print *,'Beginning set iteration: ',iter
        END IF
        IF (iter == 10) THEN
-         print *, 'Did not converge in set iteration',iter
+         ! BMT print *, 'Did not converge in set iteration',iter
          fail = .TRUE.
        END IF
 
@@ -810,8 +810,8 @@ CONTAINS
 
      IF(verbosity > 2) THEN
        DO componentIndex = 1,nComps2Process
-        print *,'   After Aq Stage',allcomponents(componentIndex)%CompName,    &
-           allcomponents(componentIndex)%Total,allcomponents(componentIndex)%Value
+        ! BMT print *,'   After Aq Stage',allcomponents(componentIndex)%CompName,    &
+           ! BMT allcomponents(componentIndex)%Total,allcomponents(componentIndex)%Value
        END DO
      END IF
 
@@ -1007,7 +1007,7 @@ CONTAINS
    DO WHILE(.NOT.converged .AND. nItern < ITMAX)
 
      IF (verbosity > 1) THEN
-       print *,'---',nItern
+       ! BMT print *,'---',nItern
      END IF
 
      !-- Initialise
@@ -1043,12 +1043,12 @@ CONTAINS
      END DO
 
      IF (verbosity > 5) THEN
-       print *,'RESIDUALS---',nItern
+       ! BMT print *,'RESIDUALS---',nItern
        DO componentIndex = 1,nComps2Process
-         print *,' ',components(cList(componentIndex))%CompName,               &
-                 components(cList(componentIndex))%Total,                      &
-                 components(cList(componentIndex))%Value,                      &
-                 inequalityArray(components(componentIndex)%eqIndex,residColumn)
+         ! BMT print *,' ',components(cList(componentIndex))%CompName,               &
+                 ! BMT components(cList(componentIndex))%Total,                      &
+                 ! BMT components(cList(componentIndex))%Value,                      &
+                 ! BMT inequalityArray(components(componentIndex)%eqIndex,residColumn)
        END DO
      END IF
 
@@ -1183,10 +1183,10 @@ CONTAINS
 
      IF(verbosity > 10) THEN
        DO miscIndex = 1,nOPTEqs+nEQLEqs+nINQEqs
-         print *,'Q: ',inequalityArray(miscIndex,:)
+         ! BMT print *,'Q: ',inequalityArray(miscIndex,:)
        END DO
-       print *,'deltaconc1',deltaConc(1:nComps2Process)
-       print *,'RES:',res
+       ! BMT print *,'deltaconc1',deltaConc(1:nComps2Process)
+       ! BMT print *,'RES:',res
      END IF
 
 
@@ -1209,9 +1209,9 @@ CONTAINS
 
 
      IF(verbosity > 10) THEN
-       print *,'outKODE',outKODE
-       print *,'deltaconc2',deltaConc(1:nComps2Process)
-       print *,'RES:',res
+       ! BMT print *,'outKODE',outKODE
+       ! BMT print *,'deltaconc2',deltaConc(1:nComps2Process)
+       ! BMT print *,'RES:',res
      END IF
 
 
@@ -1260,12 +1260,12 @@ CONTAINS
        END IF
      END DO
      IF (verbosity > 5) THEN
-       print *,'RESIDUALS2---',nItern
+       ! BMT print *,'RESIDUALS2---',nItern
        DO componentIndex = 1,nComps2Process
-         print *,' ',components(cList(componentIndex))%CompName,               &
-                     components(cList(componentIndex))%Total,                  &
-                     components(cList(componentIndex))%Value,                  &
-                 inequalityArray(components(componentIndex)%eqIndex,residColumn)
+         ! BMT print *,' ',components(cList(componentIndex))%CompName,               &
+                     ! BMT components(cList(componentIndex))%Total,                  &
+                     ! BMT components(cList(componentIndex))%Value,                  &
+                 ! BMT inequalityArray(components(componentIndex)%eqIndex,residColumn)
        END DO
      END IF
 
@@ -1291,15 +1291,15 @@ CONTAINS
        IF(ABS(inequalityArray(components(componentIndex)%eqIndex,residColumn))>&
                                                              convTolerance) THEN
 
-         print *,'Component Type & Name: ',                                    &
-                                components(cList(componentIndex))%CompType,    &
-                components(cList(componentIndex))%CompName
+         ! BMT print *,'Component Type & Name: ',                                    &
+                       ! BMT          components(cList(componentIndex))%CompType,    &
+             ! BMT    components(cList(componentIndex))%CompName
 
          IF(components(cList(componentIndex))%CompType == PUREPHASE)  THEN
 !           print *,' PurePhase non-convergence after ',nItern,' steps'
-         print *,' ->PP: ',  componentIndex,   cList(componentIndex),                  &
-                components(cList(componentIndex))%ppdata%moles,&
-                inequalityArray(components(componentIndex)%eqIndex,residColumn)
+         ! BMT print *,' ->PP: ',  componentIndex,   cList(componentIndex),                  &
+              ! BMT   components(cList(componentIndex))%ppdata%moles,&
+             ! BMT    inequalityArray(components(componentIndex)%eqIndex,residColumn)
 
            IF(components(cList(componentIndex))%ppdata%moles < 1e-20) THEN
 !             print *,'  # moles <1e-20, so proceeding'
@@ -1576,7 +1576,7 @@ CONTAINS
 
 
    IF(eqCounter /= nComps2Process) THEN
-     print *,'Problem setting eqIndex for Speciation:',eqCounter,nComps2Process
+     ! BMT print *,'Problem setting eqIndex for Speciation:',eqCounter,nComps2Process
      STOP
    END IF
 
@@ -1743,9 +1743,9 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
            f0 = deltaConc(componentIndex) / comps(cIndex)%ppData%moles
            IF (f0 > factor) THEN
              IF(verbosity > 5 ) THEN
-               print *,'Removing more mineral than is available:',             &
-                        comps(cIndex)%CompName,deltaConc(componentIndex),      &
-                        comps(cIndex)%ppData%moles,f0
+               ! BMT print *,'Removing more mineral than is available:',             &
+                        ! BMT comps(cIndex)%CompName,deltaConc(componentIndex),      &
+                        ! BMT comps(cIndex)%ppData%moles,f0
              END IF
              factor = f0
            END IF
@@ -1754,9 +1754,9 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
          ELSE IF ( deltaConc(componentIndex) > gc_zero .AND.                   &
                                     comps(cIndex)%ppData%moles <= gc_zero ) THEN
            IF(verbosity > 5 ) THEN
-              print *,'Dissolving mineral with 0 mass:',                       &
-                 comps(cIndex)%CompName, deltaConc(componentIndex),            &
-                 comps(cIndex)%ppData%moles
+              ! BMT print *,'Dissolving mineral with 0 mass:',                       &
+                 ! BMT comps(cIndex)%CompName, deltaConc(componentIndex),            &
+                 ! BMT comps(cIndex)%ppData%moles
            END IF
            deltaConc(componentIndex) = gc_zero
 
@@ -1768,9 +1768,9 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
            f0 = -deltaConc(componentIndex) / 100.0
            IF (f0 > factor) THEN
              IF(verbosity > 5 ) THEN
-               print *,'Precipitating too much mineral:',                      &
-                     comps(cIndex)%CompName,deltaConc(componentIndex),         &
-                     comps(cIndex)%ppData%moles, f0
+               ! BMT print *,'Precipitating too much mineral:',                      &
+                     ! BMT comps(cIndex)%CompName,deltaConc(componentIndex),         &
+                     ! BMT comps(cIndex)%ppData%moles, f0
              END IF
             factor = f0
            END IF
@@ -1927,10 +1927,10 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
      !-- Pure Phases
      IF(comps(cIndex)%CompType == PUREPHASE) THEN
        IF (verbosity > 5) THEN
-         print *,'PUREPHASE: X=X+dX',cIndex,comps(cIndex)%ppData%moles,        &
-                                     comps(cIndex)%ppData%moles -              &
-                                     deltaConc(componentIndex),                &
-                     deltaConc(componentIndex)
+         ! BMT print *,'PUREPHASE: X=X+dX',cIndex,comps(cIndex)%ppData%moles,        &
+               ! BMT                       comps(cIndex)%ppData%moles -              &
+                     ! BMT                 deltaConc(componentIndex),                &
+                     ! BMT deltaConc(componentIndex)
        END IF
 
        comps(cIndex)%ppData%moles = comps(cIndex)%ppData%moles -               &
@@ -1940,9 +1940,9 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
      ! Ionic Strength
      ELSE IF(comps(cIndex)%CompType == IONSTNGTH ) THEN
        IF (verbosity > 5) THEN
-         print *,'MU: X=X+dX',cIndex,comps(cIndex)%Total, &
-              comps(cIndex)%Total + deltaConc(componentIndex),&
-                                          deltaConc(componentIndex)
+         ! BMT print *,'MU: X=X+dX',cIndex,comps(cIndex)%Total, &
+              ! BMT comps(cIndex)%Total + deltaConc(componentIndex),&
+                    ! BMT                       deltaConc(componentIndex)
        END IF
 
        mu_calc = 0.500 * comps(cIndex)%Value / Waq
@@ -1965,10 +1965,10 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
      ELSE IF(comps(cIndex)%CompType == MOLEBLNCE ) THEN
        !ln(a) = ln(a) + dln(a)
        IF (verbosity > 5) THEN
-         print *,'MB: X=X+dX',cIndex,comps(cIndex)%master%logActivity,         &
-                              comps(cIndex)%master%logActivity +               &
-                              deltaConc(componentIndex) / LOG(REAL(10.0,DP)),  &
-                  deltaConc(componentIndex)
+         ! BMT print *,'MB: X=X+dX',cIndex,comps(cIndex)%master%logActivity,         &
+               ! BMT                comps(cIndex)%master%logActivity +               &
+                     ! BMT          deltaConc(componentIndex) / LOG(REAL(10.0,DP)),  &
+                  ! BMT deltaConc(componentIndex)
        END IF
 
        comps(cIndex)%master%logActivity = comps(cIndex)%master%logActivity     &
@@ -1979,10 +1979,10 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
      ELSE IF(comps(cIndex)%CompType == CHARGEBAL ) THEN
        !ln(a) = ln(a) + dln(a)
        IF (verbosity > 5) THEN
-         print *,'CB: X=X+dX',cIndex,comps(cIndex)%master%logActivity,         &
-                              comps(cIndex)%master%logActivity +               &
-                              deltaConc(componentIndex) / LOG(REAL(10.0,DP)),  &
-                  deltaConc(componentIndex)
+         ! BMT print *,'CB: X=X+dX',cIndex,comps(cIndex)%master%logActivity,         &
+               ! BMT                comps(cIndex)%master%logActivity +               &
+                     ! BMT          deltaConc(componentIndex) / LOG(REAL(10.0,DP)),  &
+                  ! BMT deltaConc(componentIndex)
        END IF
 
        comps(cIndex)%master%logActivity = comps(cIndex)%master%logActivity     &
@@ -2014,10 +2014,10 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
      ELSE IF(comps(cIndex)%CompType == MASSHYDGN ) THEN
        !ln(a) = ln(a) + dln(a)
        IF (verbosity > 5) THEN
-         print *,'MH: X=X+dX',cIndex,comps(cIndex)%master%logActivity,         &
-                              comps(cIndex)%master%logActivity                 &
-                + deltaConc(componentIndex) / LOG(REAL(10.0,DP)),  &
-                              deltaConc(componentIndex)
+         ! BMT print *,'MH: X=X+dX',cIndex,comps(cIndex)%master%logActivity,         &
+               ! BMT                comps(cIndex)%master%logActivity                 &
+                ! BMT + deltaConc(componentIndex) / LOG(REAL(10.0,DP)),  &
+                      ! BMT         deltaConc(componentIndex)
        END IF
 
        comps(cIndex)%master%logActivity = comps(cIndex)%master%logActivity     &
@@ -2029,14 +2029,14 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
        highPrecBuffer = REAL(deltaConc(componentIndex),DP)
        Waq = Waq * REAL(EXP(highPrecBuffer),GCHP)
        IF (verbosity > 5) THEN
-         print *,'MH20: X=X+dX',comps(cIndex)%Total, Waq / molWgtH2O ,         &
-                                deltaConc(componentIndex)
+         ! BMT print *,'MH20: X=X+dX',comps(cIndex)%Total, Waq / molWgtH2O ,         &
+               ! BMT                  deltaConc(componentIndex)
        END IF
 
        activityWater%master%Moles = Waq / molWgtH2O
 
        IF (Waq < 1e-10) THEN
-         print *, 'Mass of water is less than 1e-10 kilogram, STOPPING'
+         ! BMT print *, 'Mass of water is less than 1e-10 kilogram, STOPPING'
          STOP
        END IF
 
@@ -2063,8 +2063,8 @@ SUBROUTINE UpdateUnknownsWithdX(deltaConc,comps,cList)                        !
             comps(cIndex)%CompType == CHARGEBAL   ) THEN
 
             IF (verbosity > 5) THEN
-              print *,'adjust Total',comps(cIndex)%CompName,comps(cIndex)%Total&
-                                ,comps(cIndex)%delta
+              ! BMT print *,'adjust Total',comps(cIndex)%CompName,comps(cIndex)%Total&
+                    ! BMT             ,comps(cIndex)%delta
             END IF
 
             comps(cIndex)%Total = comps(cIndex)%Total + comps(cIndex)%delta
@@ -2365,8 +2365,8 @@ END SUBROUTINE UpdateUnknownsWithdX
 
        !--OPTIONAL CHECK:
        IF(rowCounter /= comps(rowCompIndex)%eqIndex) THEN
-         print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
-         print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
+         ! BMT print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
+         ! BMT print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
          STOP
        END IF
 
@@ -2453,8 +2453,8 @@ END SUBROUTINE UpdateUnknownsWithdX
 
        !##OPTIONAL CHECK:
        IF(rowCounter /= comps(rowCompIndex)%eqIndex) THEN
-         print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
-         print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
+         ! BMT print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
+         ! BMT print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
          STOP
        END IF
 
@@ -2527,8 +2527,8 @@ END SUBROUTINE UpdateUnknownsWithdX
        END DO
 
        IF(rowCounter /= comps(rowCompIndex)%eqIndex) THEN
-         print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
-         print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
+         ! BMT print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
+         ! BMT print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
          STOP
        END IF
 
@@ -2604,8 +2604,8 @@ END SUBROUTINE UpdateUnknownsWithdX
        END DO
 
        IF(rowCounter /= comps(rowCompIndex)%eqIndex) THEN
-         print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
-         print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
+         ! BMT print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
+         ! BMT print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
          STOP
        END IF
 
@@ -2668,8 +2668,8 @@ END SUBROUTINE UpdateUnknownsWithdX
 
        !##OPTIONAL CHECK:
        IF(rowCounter /= comps(rowCompIndex)%eqIndex) THEN
-         print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
-         print *,'rowCounter:',rowCounter, ' eqIndex:',comps(rowCompIndex)%eqIndex
+         ! BMT print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
+         ! BMT print *,'rowCounter:',rowCounter, ' eqIndex:',comps(rowCompIndex)%eqIndex
          STOP
        END IF
 
@@ -2728,8 +2728,8 @@ END SUBROUTINE UpdateUnknownsWithdX
 
        !##OPTIONAL CHECK:
        IF(rowCounter /= comps(rowCompIndex)%eqIndex) THEN
-         print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
-         print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
+         ! BMT print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
+         ! BMT print *,'rowCounter:',rowCounter,' eqIndex:',comps(rowCompIndex)%eqIndex
          STOP
        END IF
 
@@ -2800,9 +2800,9 @@ END SUBROUTINE UpdateUnknownsWithdX
        END DO
 
        IF(rowCounter /= comps(rowCompIndex)%eqIndex) THEN
-         print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
-         print *,'rowCounter:',rowCounter, ' eqIndex:',                        &
-                                              comps(rowCompIndex)%eqIndex
+         ! BMT print *,'rowCounter /= comps(rowCompIndex)%eqIndex'
+         ! BMT print *,'rowCounter:',rowCounter, ' eqIndex:',                        &
+                                  ! BMT             comps(rowCompIndex)%eqIndex
          STOP
        END IF
 
@@ -2814,13 +2814,13 @@ END SUBROUTINE UpdateUnknownsWithdX
 
    !-- Consistency check: nOPTEqs+nEQLEqs = rowCounter
    IF(rowCounter-1 /= (nOPTEqs+nEQLEqs)) THEN
-     print *,'rowCounter /= nOPTEqs+nEQLEqs after A&B matrix built in ',       &
-             THIS_PROC
-     print *,'rowCounter = ',rowCounter-1
-     print *,'nOPTEqs+nEQLEqs = ',nOPTEqs+nEQLEqs
-     print *,'jacobian:'
+     ! BMT print *,'rowCounter /= nOPTEqs+nEQLEqs after A&B matrix built in ',       &
+         ! BMT     THIS_PROC
+     ! BMT print *,'rowCounter = ',rowCounter-1
+     ! BMT print *,'nOPTEqs+nEQLEqs = ',nOPTEqs+nEQLEqs
+     ! BMT print *,'jacobian:'
      DO rowCompIndex = 1,nComps2Process
-       print *,'-> ',rowCompIndex,jacobian(rowCompIndex,:)
+       ! BMT print *,'-> ',rowCompIndex,jacobian(rowCompIndex,:)
      END DO
 
      STOP
@@ -2937,8 +2937,8 @@ END SUBROUTINE UpdateUnknownsWithdX
 
 
      IF(verbosity > 5) THEN
-       print *,'TOTAL: ',components(componentIndex)%CompName,                  &
-                         components(componentIndex)%Total
+       ! BMT print *,'TOTAL: ',components(componentIndex)%CompName,                  &
+             ! BMT             components(componentIndex)%Total
      END IF
 
    END DO
@@ -3094,8 +3094,8 @@ END SUBROUTINE UpdateUnknownsWithdX
      Index    = wqColCounter
 
    IF(Index == 0) THEN
-     print *,' Error in: ', THIS_PROC
-     print *,' DICHM column = ', Index
+     ! BMT print *,' Error in: ', THIS_PROC
+     ! BMT print *,' DICHM column = ', Index
      STOP
    END IF
 
@@ -3120,8 +3120,8 @@ END SUBROUTINE UpdateUnknownsWithdX
    Index    =  wqColCounter
 
    IF(Index == 0) THEN
-     print *,'Error in: ', THIS_PROC
-     print *,'PICHM column = ', Index
+     ! BMT print *,'Error in: ', THIS_PROC
+     ! BMT print *,'PICHM column = ', Index
      STOP
    END IF
 
@@ -3191,7 +3191,7 @@ END SUBROUTINE UpdateUnknownsWithdX
         END IF
       END DO
       IF(verbosity >10) THEN
-        print *,'speciesList: ',dummySpecies%Name, ANY(.NOT.simulatedStatus)
+        ! BMT print *,'speciesList: ',dummySpecies%Name, ANY(.NOT.simulatedStatus)
       END IF
       IF (.NOT. ANY(.NOT.simulatedStatus)) THEN
         bufferList(i) = i
@@ -3785,22 +3785,22 @@ END SUBROUTINE UpdateUnknownsWithdX
 
     !--------------------------------------------------
     DO i = 1, nComp
-      print *,'----> :     ',i
-      print *,' CompName:  ',comp(i)%CompName
-      print *,' EltName:   ',comp(i)%EltName
-      print *,' CompType:  ',comp(i)%CompType
-      print *,' CompIndex: ',comp(i)%CompIndex
-      print *,' eqIndex:   ',comp(i)%eqIndex
-      print *,' wqIndex:   ',comp(i)%wqIndex
-      print *,' delta:     ',comp(i)%delta
-      print *,' Value:     ',comp(i)%Value
-      print *,' Total:     ',comp(i)%Total
+      ! BMT print *,'----> :     ',i
+      ! BMT print *,' CompName:  ',comp(i)%CompName
+      ! BMT print *,' EltName:   ',comp(i)%EltName
+      ! BMT print *,' CompType:  ',comp(i)%CompType
+      ! BMT print *,' CompIndex: ',comp(i)%CompIndex
+      ! BMT print *,' eqIndex:   ',comp(i)%eqIndex
+      ! BMT print *,' wqIndex:   ',comp(i)%wqIndex
+      ! BMT print *,' delta:     ',comp(i)%delta
+      ! BMT print *,' Value:     ',comp(i)%Value
+      ! BMT print *,' Total:     ',comp(i)%Total
       IF(comp(i)%CompType==PUREPHASE) THEN
-        print *,' ppData%logK  :  ',comp(i)%ppData%logK
-        print *,' ppData%moles :  ',comp(i)%ppData%moles
-        print *,' ppData%stoich:  ',comp(i)%ppData%stoich
+        ! BMT print *,' ppData%logK  :  ',comp(i)%ppData%logK
+        ! BMT print *,' ppData%moles :  ',comp(i)%ppData%moles
+        ! BMT print *,' ppData%stoich:  ',comp(i)%ppData%stoich
       END IF
-      print *,'  --<'
+      ! BMT print *,'  --<'
     END DO
     !--------------------------------------------------
 
@@ -3829,9 +3829,9 @@ END SUBROUTINE UpdateUnknownsWithdX
 
     !--------------------------------------------------
     DO i = 1, nComp
-      print *,'----> :     ',i
-      print *,' CompName:  ',TRIM(comp(i)%CompName),'  Total:     ',comp(i)%Total
-      print *,'  --<'
+      ! BMT print *,'----> :     ',i
+      ! BMT print *,' CompName:  ',TRIM(comp(i)%CompName),'  Total:     ',comp(i)%Total
+      ! BMT print *,'  --<'
     END DO
     !--------------------------------------------------
 
@@ -3858,21 +3858,21 @@ END SUBROUTINE UpdateUnknownsWithdX
     nSpec = SIZE(spec)
     !--------------------------------------------------
     DO i = 1, nSpec
-      print *,'----> :    '
-      print *,' SpeciesIndex: ',spec(i)%SpeciesIndex
-      print *,' Name:     ',spec(i)%Name
-      print *,' Charge:   ',spec(i)%Charge
-      print *,' logK:     ',spec(i)%logK
-      print *,' deltaH:   ',spec(i)%deltaH
-      print *,' Gflag:    ',spec(i)%Gflag
-      print *,' H2OStoich:',spec(i)%H2OStoich
-      print *,' HStoich:  ',spec(i)%HStoich
-      print *,' Moles:    ',spec(i)%Moles
-      print *,' log(act): ',spec(i)%logActivity
-      print *,' loggamma: ',spec(i)%logGamma
-      print *,' delgamma: ',spec(i)%delGamma
-      print *,' stoich:   ',INT(spec(i)%stoich)
-      print *,'  --<'
+      ! BMT print *,'----> :    '
+      ! BMT print *,' SpeciesIndex: ',spec(i)%SpeciesIndex
+      ! BMT print *,' Name:     ',spec(i)%Name
+      ! BMT print *,' Charge:   ',spec(i)%Charge
+      ! BMT print *,' logK:     ',spec(i)%logK
+      ! BMT print *,' deltaH:   ',spec(i)%deltaH
+      ! BMT print *,' Gflag:    ',spec(i)%Gflag
+      ! BMT print *,' H2OStoich:',spec(i)%H2OStoich
+      ! BMT print *,' HStoich:  ',spec(i)%HStoich
+      ! BMT print *,' Moles:    ',spec(i)%Moles
+      ! BMT print *,' log(act): ',spec(i)%logActivity
+      ! BMT print *,' loggamma: ',spec(i)%logGamma
+      ! BMT print *,' delgamma: ',spec(i)%delGamma
+      ! BMT print *,' stoich:   ',INT(spec(i)%stoich)
+      ! BMT print *,'  --<'
     END DO
     !--------------------------------------------------
 

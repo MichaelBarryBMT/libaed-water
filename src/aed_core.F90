@@ -251,7 +251,7 @@ SUBROUTINE display_var(var, idx)
       DO WHILE ( ASSOCIATED(req%next) )
          req => req%next
          IF (LEN_TRIM(line) >= 75 .AND. ASSOCIATED(req%next)) THEN
-             write(log, *) TRIM(line),","
+             ! BMT write(log, *) TRIM(line),","
              line(1:51)=' '
              line = line(1:51) // req%aed_model_prefix
          ELSE
@@ -263,7 +263,7 @@ SUBROUTINE display_var(var, idx)
       line = TRIM(line) // "     (zavg req)"
    ENDIF
 
-   write(log, *) TRIM(line)
+   ! BMT write(log, *) TRIM(line)
 END SUBROUTINE display_var
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -282,17 +282,17 @@ INTEGER FUNCTION aed_core_status(n_v, n_sv, n_d, n_sd, logit)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   write(log, *)
-   write(log, *) ' ---------------------- AED Variables Summary ----------------------'
-   write(log, *) 'Var name           | Module           | Type | ID | Usage (ie who linked to me)'
-   write(log, *)
-   write(log, *) 'ENVIRONMENT:'
+   ! BMT write(log, *)
+   ! BMT write(log, *) ' ---------------------- AED Variables Summary ----------------------'
+   ! BMT write(log, *) 'Var name           | Module           | Type | ID | Usage (ie who linked to me)'
+   ! BMT write(log, *)
+   ! BMT write(log, *) 'ENVIRONMENT:'
    DO i=1,n_aed_vars
       IF ( all_vars(i)%extern ) CALL display_var(all_vars(i), i)
    ENDDO
 
-   write(log, *)
-   write(log, *) 'STATE:'
+   ! BMT write(log, *)
+   ! BMT write(log, *) 'STATE:'
    n_vars = 0 ; n_sheet_vars = 0
    DO i=1,n_aed_vars
       IF ( .NOT. all_vars(i)%extern .AND. .NOT. all_vars(i)%diag ) THEN
@@ -302,8 +302,8 @@ INTEGER FUNCTION aed_core_status(n_v, n_sv, n_d, n_sd, logit)
       ENDIF
    ENDDO
 
-   write(log, *)
-   write(log, *) 'DIAGNOSTIC:'
+   ! BMT write(log, *)
+   ! BMT write(log, *) 'DIAGNOSTIC:'
    n_diags = 0 ; n_sheet_diags = 0;
    DO i=1,n_aed_vars
       IF ( .NOT. all_vars(i)%extern .AND. all_vars(i)%diag ) THEN
@@ -312,9 +312,9 @@ INTEGER FUNCTION aed_core_status(n_v, n_sv, n_d, n_sd, logit)
          ELSE ; n_diags = n_diags + 1 ; ENDIF
       ENDIF
    ENDDO
-   write(log, *)
-   write(log, *) ' -------------------------------------------------------------------'
-   write(log, *)
+   ! BMT write(log, *)
+   ! BMT write(log, *) ' -------------------------------------------------------------------'
+   ! BMT write(log, *)
 
    n_v = n_vars;  n_sv = n_sheet_vars
    n_d = n_diags; n_sd = n_sheet_diags

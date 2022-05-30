@@ -202,7 +202,7 @@ SUBROUTINE aed_define_oxygen(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_oxygen configuration"
+   ! BMT print *"        aed_oxygen configuration"
 
    ! Read the namelist
    read(namlst,nml=aed_oxygen,iostat=status)

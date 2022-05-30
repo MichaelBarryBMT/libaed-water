@@ -138,7 +138,7 @@ SUBROUTINE AED_GC_Input(geoChemFile)
    infile = f_get_lun()
    OPEN(UNIT=infile,FILE=geochemFile,STATUS = "OLD",ACTION="READ",IOSTAT=status)
    IF ( status/=0) then
-      print*, "Cannot open ",trim(geochemFile)
+      ! BMT print*, "Cannot open ",trim(geochemFile)
       stop
    ENDIF
 

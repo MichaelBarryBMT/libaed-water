@@ -153,8 +153,8 @@ SUBROUTINE aed_define_habitat_water(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_habitat_water configuration"
-   print *,"          WARNING! aed_habitat model is currently under development"
+   ! BMT print *,"        aed_habitat_water configuration"
+   ! BMT print *,"          WARNING! aed_habitat model is currently under development"
 
    ! Default
    simClearWater = .false.
@@ -179,7 +179,7 @@ SUBROUTINE aed_define_habitat_water(data, namlst)
    data%simCyanoRisk     = simCyanoRisk     ; IF(simCyanoRisk) data%num_habitats=data%num_habitats+1
    data%simClearWater    = simClearWater    ; IF(simClearWater) data%num_habitats=data%num_habitats+1
 
-   print *,"          ... # habitat templates simulated: ",data%num_habitats
+   ! BMT print *,"          ... # habitat templates simulated: ",data%num_habitats
 
    !----------------------------------------------------------------------------
    ! Define variables and dependencies
@@ -229,7 +229,7 @@ SUBROUTINE aed_define_habitat_water(data, namlst)
        data%fish_Ocrit(f) =  fish_Ocrit(f)
        data%fish_KO(f)    =  fish_KO(f)
      ENDDO
-     print *,'yo'
+     ! BMT print *,'yo'
    ENDIF
 
 !   !-- GENERAL

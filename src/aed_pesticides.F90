@@ -191,8 +191,8 @@ SUBROUTINE aed_define_pesticides(data, namlst)
             gpp_variable
 !-----------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_pesticides configuration"
-   print *,"          NOTE : UNDER DEVELOPMENT ... "
+   ! BMT print *,"        aed_pesticides configuration"
+   ! BMT print *,"          NOTE : UNDER DEVELOPMENT ... "
 
    !stop "Please disable the pesticide model in your configuration"
 

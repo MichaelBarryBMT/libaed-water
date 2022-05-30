@@ -117,20 +117,20 @@ END FUNCTION aed_new_wat_model
 SUBROUTINE aed_print_wat_version
 !-------------------------------------------------------------------------------
 !BEGIN
-   print*,"    libaed-water version ", TRIM(AED_VERSION)
+   ! BMT print*,"    libaed-water version ", TRIM(AED_VERSION)
 #ifdef __INTEL_COMPILER
-   print*,"    libaed built using intel fortran version ", __INTEL_COMPILER
+   ! BMT print*,"    libaed built using intel fortran version ", __INTEL_COMPILER
 #else
 # ifdef __PGI
-   print*,"    libaed built using pgfortran version ", __PGIC__, '.', __PGIC_MINOR__, '.', __PGIC_PATCHLEVEL__
+   ! BMT print*,"    libaed built using pgfortran version ", __PGIC__, '.', __PGIC_MINOR__, '.', __PGIC_PATCHLEVEL__
 # else
 #  ifdef __GNUC__
-    print*,"    libaed built using gfortran version ", __GNUC__, '.', __GNUC_MINOR__, '.', __GNUC_PATCHLEVEL__
+    ! BMT print*,"    libaed built using gfortran version ", __GNUC__, '.', __GNUC_MINOR__, '.', __GNUC_PATCHLEVEL__
 #  else
 #   ifdef __clang__
-     print*,"    libaed built using flang version ", __clang_major__, '.', __clang_minor__, '.', __clang_patchlevel__
+     ! BMT print*,"    libaed built using flang version ", __clang_major__, '.', __clang_minor__, '.', __clang_patchlevel__
 #   else
-     print*,"    libaed built using unknown fortran version "
+     ! BMT print*,"    libaed built using unknown fortran version "
 #   endif
 #  endif
 # endif
