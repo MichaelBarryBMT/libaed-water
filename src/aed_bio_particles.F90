@@ -149,7 +149,7 @@ SUBROUTINE aed_define_bio_particles(data, namlst)
    read(namlst,nml=aed_bio_particles,iostat=status)
    IF (status /= 0) STOP 'Error reading namelist aed_bio_particles'
 
-   print *,"        aed_bio_particles initialization"
+   ! BMT print *,"        aed_bio_particles initialization"
 
    IF ( extra_diag ) diag_level = 10
 

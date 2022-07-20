@@ -179,7 +179,7 @@ SUBROUTINE phyto_internal_phosphorus(phytos,group,npup,phy,IP,primprod,        &
    ELSE
 
       ! Unknown phosphorus uptake function
-      print *,'STOP: unknown simIPDynamics (',phytos(group)%simIPDynamics,') for: ',phytos(group)%p_name
+      ! BMT print *,'STOP: unknown simIPDynamics (',phytos(group)%simIPDynamics,') for: ',phytos(group)%p_name
       STOP
 
    ENDIF
@@ -251,7 +251,7 @@ SUBROUTINE phyto_internal_nitrogen(phytos,group,do_N2uptake,phy,IN,primprod,   &
       uptake(1) = -uptake(1)
    ELSE
       ! Unknown nitrogen uptake function
-      print *,'STOP: unknown simINDynamics (',phytos(group)%simINDynamics,') for: ',phytos(group)%p_name
+      ! BMT print *,'STOP: unknown simINDynamics (',phytos(group)%simINDynamics,') for: ',phytos(group)%p_name
       STOP
    ENDIF
 
@@ -487,8 +487,8 @@ FUNCTION phyto_salinity(phytos,group,salinity) RESULT(fSal)
       !# f(S) = 1 at S=S_opt, f(S) = S_bep at S=S_maxsp.
 
       IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
-        PRINT *,'WARNING: salTol flag for phyto group: ',group, &
-                   ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
+  ! BMT      PRINT *,'WARNING: salTol flag for phyto group: ',group, &
+        ! BMT            ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
 
       ! change fSal above Sopt for increasing stress on freshwater species
       IF (salinity>phytos(group)%S_opt) THEN
@@ -507,8 +507,8 @@ FUNCTION phyto_salinity(phytos,group,salinity) RESULT(fSal)
       !# f(S) = 1 at S>=S_opt, f(S) = S_bep at S=0.
 
       IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
-        PRINT *,'WARNING: salTol flag for phyto group: ',group, &
-                      ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
+       ! BMT  PRINT *,'WARNING: salTol flag for phyto group: ',group, &
+             ! BMT          ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
 
       IF (salinity<phytos(group)%S_opt) THEN
          fSal = (phytos(group)%S_bep-1.0) * (salinity**2.0)/(phytos(group)%S_opt**2.0)   &
@@ -522,8 +522,8 @@ FUNCTION phyto_salinity(phytos,group,salinity) RESULT(fSal)
       ! f(S) = 1 at S=S_opt, f(S) = S_bep at S=0 and 2*S_opt.
 
       IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
-        PRINT *,'WARNING: salTol flag for phyto group: ',group, &
-                      ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
+       ! BMT  PRINT *,'WARNING: salTol flag for phyto group: ',group, &
+             ! BMT          ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
 
       IF (salinity < phytos(group)%S_opt) THEN
          fSal = (phytos(group)%S_bep-1.0)*(salinity**2.0)/(phytos(group)%S_opt**2.0)-  &
@@ -557,7 +557,7 @@ FUNCTION phyto_salinity(phytos,group,salinity) RESULT(fSal)
 
    ELSE
       fSal = one_
-      PRINT *,'WARNING: Unsupported salTol flag for phyto group: ',group,'=', phytos(group)%salTol
+      ! BMT PRINT *,'WARNING: Unsupported salTol flag for phyto group: ',group,'=', phytos(group)%salTol
    ENDIF
 
    IF( fSal < zero_ ) fSal = zero_

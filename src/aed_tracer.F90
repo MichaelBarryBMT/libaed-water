@@ -213,7 +213,7 @@ SUBROUTINE aed_define_tracer(data, namlst)
       IF ( macrophyte_link_var .NE. '' ) THEN
          data%id_l_bot = aed_locate_sheet_variable(macrophyte_link_var)
          IF ( data%id_l_bot .LE. 0 ) THEN
-            print *, "Macrophyte Link Variable ", TRIM(macrophyte_link_var), " is not defined."
+            ! BMT print *, "Macrophyte Link Variable ", TRIM(macrophyte_link_var), " is not defined."
             STOP
          ENDIF
       ELSE

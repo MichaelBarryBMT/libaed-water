@@ -209,7 +209,7 @@ SUBROUTINE aed_define_carbon(data, namlst)
    !# Read the namelist
    read(namlst,nml=aed_carbon,iostat=status)
    IF (status /= 0) THEN
-      print *,'Error reading namelist for &aed_carbon'
+      ! BMT print *,'Error reading namelist for &aed_carbon'
       STOP
    ENDIF
 
@@ -469,7 +469,7 @@ SUBROUTINE aed_calculate_surface_carbon(data,column,layer_idx)
           ! print *,'ss',talk
            iter = iter+1
            IF(iter>100) then
-             print *, 'note pH-TA convergance failure',pH
+             ! BMT print *, 'note pH-TA convergance failure',pH
              exit
            ENDIF
          END DO
@@ -811,7 +811,7 @@ SUBROUTINE aed_equilibrate_carbon(data,column,layer_idx)
           pH = pHout
           iter = iter+1
           IF(iter>100) then
-            print *, 'note pH-TA convergance failure',pH
+            ! BMT print *, 'note pH-TA convergance failure',pH
             exit
           ENDIF
         END DO
@@ -1118,16 +1118,16 @@ END FUNCTION aed_carbon_co2
        ! Solution hasn't converged and residuals are high
        lowValueLoc1 = SIZE(residual) - 1
        IF(pmode) THEN
-         print *,'pH iteration convergence problems -'
-         print *,'   consider reducing your timestep'
+         ! BMT print *,'pH iteration convergence problems -'
+         ! BMT print *,'   consider reducing your timestep'
        END IF
      END IF
      IF(lowValueLoc1 <= 1) THEN
        ! Solution hasn't converged and residuals are high
        lowValueLoc1 = 2
        IF(pmode) THEN
-         print *,'pH iteration convergence problems -'
-         print *,'   consider reducing your timestep'
+         ! BMT print *,'pH iteration convergence problems -'
+         ! BMT print *,'   consider reducing your timestep'
        END IF
      END IF
 

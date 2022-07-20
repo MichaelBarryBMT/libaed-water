@@ -136,7 +136,7 @@ SUBROUTINE aed_define_dummy(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-   print *,"        aed_dummy initialization"
+   ! BMT print *,"        aed_dummy initialization"
 
    num_v = 0 ; num_dv = 0 ; num_sv = 0 ; num_dsv = 0
 

@@ -649,7 +649,7 @@ SUBROUTINE aed_bio_temp_function(numg, theta, T_std, T_opt, T_max, aTn, bTn, kTn
       v = theta(group)
 
       IF(v < 1.01) THEN
-        print "(/,5X,'WARNING: theta_growth for group ',I2,' < 1.01',/)",group
+        ! BMT print "(/,5X,'WARNING: theta_growth for group ',I2,' < 1.01',/)",group
       ENDIF
 
       Tm = T_max(group)

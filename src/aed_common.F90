@@ -192,7 +192,7 @@ SUBROUTINE aed_define_model(modeldef, namlst)
       IF ( ASSOCIATED(last_model) ) last_model%next => model
       last_model => model
    ELSE
-      print *,'*** Unknown module ', TRIM(modelname)
+      ! BMT  \print *,'*** Unknown module ', TRIM(modelname)
    ENDIF
 END SUBROUTINE aed_define_model
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -239,7 +239,7 @@ LOGICAL FUNCTION aed_requested_zones(n_aed_vars)
                     ! non-environent variable sheets can be averaged
                     j = j + 1
                     tvar%zavg = .TRUE.
-                    print *,'        zone averaged variable: ',TRIM(tvar%name)
+                    ! BMT print *,'        zone averaged variable: ',TRIM(tvar%name)
                   ELSE
                     ! averageing requests for env or non-sheets are not possible
                     IF ( tvar%zavg ) err = .TRUE.
@@ -254,8 +254,8 @@ LOGICAL FUNCTION aed_requested_zones(n_aed_vars)
                         ! non-environent variable sheets can be averaged
                         j = j + 1
                         tvar%zavg = .TRUE.
-                        print *,'        zone averaged variable: ', &
-                                 TRIM(tvar%name)//'   (linked by',model%aed_model_id,TRIM(model%aed_model_name),')'
+                        ! BMT print *,'        zone averaged variable: ', &
+                              ! BMT    TRIM(tvar%name)//'   (linked by',model%aed_model_id,TRIM(model%aed_model_name),')'
                                          !MH glitch here is if order is out then wrong linked model appears
                      ELSE
                         ! averageing requests for env or non-sheets are not possible

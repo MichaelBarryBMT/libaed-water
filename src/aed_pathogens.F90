@@ -336,7 +336,7 @@ INTEGER FUNCTION load_csv(dbase, pd)
             CASE ('coef_resus_epsilonP') ; pd(dcol)%coef_resus_epsilonP = extract_double(values(ccol))
             CASE ('coef_resus_tauP_0')   ; pd(dcol)%coef_resus_tauP_0   = extract_double(values(ccol))
 
-            CASE DEFAULT ; print *, 'Unknown row "', TRIM(name), '"'
+            CASE DEFAULT ; ! BMT print *, 'Unknown row "', TRIM(name), '"'
          END SELECT
       ENDDO
    ENDDO

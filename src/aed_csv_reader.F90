@@ -591,7 +591,7 @@ LOGICAL FUNCTION aed_csv_read_row(unit, values)
       ENDIF
    ENDDO
    IF ( i > 0 .AND. i /= ncols ) &
-      print *, "data row had ", i, " columns : expecting ", ncols
+      ! BMT print *, "data row had ", i, " columns : expecting ", ncols
 
    aed_csv_read_row = (i > 0)
 END FUNCTION aed_csv_read_row

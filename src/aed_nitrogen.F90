@@ -283,12 +283,12 @@ SUBROUTINE aed_define_nitrogen(data, namlst)
    IF( simN2O>0 ) THEN
       ! TODO check here to see if oxy is simulated if simN2O is also on
      IF (nitrif_reactant_variable .NE. '') THEN
-       print *,'          advanced nitrogen redox model linking to ',TRIM(nitrif_reactant_variable)
+       ! BMT print *,'          advanced nitrogen redox model linking to ',TRIM(nitrif_reactant_variable)
        ! this allocation is done below with other state var dependancies
        !data%id_oxy = aed_locate_variable(nitrif_reactant_variable)
-       print *,'          ... found'
+       ! BMT print *,'          ... found'
       ELSE
-        PRINT *,'  ERROR advanced nitrogen redox set (simN2O) but no oxygen target variable is set'
+        ! BMT PRINT *,'  ERROR advanced nitrogen redox set (simN2O) but no oxygen target variable is set'
         STOP
       ENDIF
 
@@ -913,7 +913,7 @@ FUNCTION NitrfSalFunction(sal_model,K_sal,S0,salinity) RESULT(fSal)
        fSal = 1.0
      ENDIF
    ELSE
-     PRINT *,'STOP: Unsupported sal_model flag for nitrogen module'
+   ! BMT   PRINT *,'STOP: Unsupported sal_model flag for nitrogen module'
    ENDIF
 
    IF( fSal < zero_ ) fSal = zero_

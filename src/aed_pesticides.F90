@@ -316,7 +316,7 @@ INTEGER FUNCTION load_csv(dbase, pd)
             CASE ('sorb(3)%pest_sorbent') ; CALL copy_name(values(ccol), pd(dcol)%sorbents(3)%pest_sorbent)
             CASE ('sorb(3)%Kpst_sorb') ; pd(dcol)%sorbents(3)%Kpst_sorb = extract_double(values(ccol))
 
-            CASE DEFAULT ; print *, 'Unknown pesticide CSV parameter row "', TRIM(name_), '"'
+            CASE DEFAULT ; ! BMT print *, 'Unknown pesticide CSV parameter row "', TRIM(name_), '"'
          END SELECT
       ENDDO
    ENDDO
@@ -358,14 +358,15 @@ SUBROUTINE aed_pesticides_load_params(data, dbase, count, list)
        CASE (CSV_TYPE)
            status = load_csv(dbase, pd)
        CASE (NML_TYPE)
-           print *,'NML file type for pesticides is not supported, please convert to CSV'
+           ! BMT print *,'NML file type for pesticides is not supported, please convert to CSV'
 !          tfil = find_free_lun()
 !          open(tfil,file=dbase, status='OLD',iostat=status)
 !          IF (status /= 0) STOP 'Error opening namelist pesticide_data'
 !          read(tfil,nml=pesticide_data,iostat=status)
 !          close(tfil)
        CASE DEFAULT
-           print *,'Unknown file type "',TRIM(dbase),'"'; status=1
+           ! BMT print *,'Unknown file type "',TRIM(dbase),'"'; 
+            status=1
     END SELECT
     IF (status /= 0) STOP 'Error reading namelist pesticide_data'
 

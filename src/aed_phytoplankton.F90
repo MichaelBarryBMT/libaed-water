@@ -269,7 +269,8 @@ SUBROUTINE aed_phytoplankton_load_params(data, dbase, count, list, settling, res
            read(tfil,nml=phyto_data,iostat=status)
            close(tfil)
        CASE DEFAULT
-           ! BMT print *,'Unknown file type "',TRIM(dbase),'"'; status=1
+           ! BMT print *,'Unknown file type "',TRIM(dbase),'"';
+            status=1
     END SELECT
     IF (status /= 0) STOP 'Error reading namelist phyto_data'
 
