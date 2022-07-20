@@ -486,7 +486,7 @@ FUNCTION phyto_salinity(phytos,group,salinity) RESULT(fSal)
    ELSEIF (sal_model == 1) THEN
       !# f(S) = 1 at S=S_opt, f(S) = S_bep at S=S_maxsp.
 
-      IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
+  ! BMT    IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
   ! BMT      PRINT *,'WARNING: salTol flag for phyto group: ',group, &
         ! BMT            ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
 
@@ -506,7 +506,7 @@ FUNCTION phyto_salinity(phytos,group,salinity) RESULT(fSal)
    ELSEIF (sal_model == 2) THEN
       !# f(S) = 1 at S>=S_opt, f(S) = S_bep at S=0.
 
-      IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
+! BMT       IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
        ! BMT  PRINT *,'WARNING: salTol flag for phyto group: ',group, &
              ! BMT          ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
 
@@ -521,7 +521,7 @@ FUNCTION phyto_salinity(phytos,group,salinity) RESULT(fSal)
    ELSEIF (sal_model == 3) THEN
       ! f(S) = 1 at S=S_opt, f(S) = S_bep at S=0 and 2*S_opt.
 
-      IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
+! BMT       IF (phytos(group)%salTol<0 .and. phytos(group)%S_bep>1) &
        ! BMT  PRINT *,'WARNING: salTol flag for phyto group: ',group, &
              ! BMT          ' is set for growth supression, but S_bep is >1: ', phytos(group)%S_bep
 
