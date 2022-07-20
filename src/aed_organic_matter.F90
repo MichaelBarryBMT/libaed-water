@@ -321,7 +321,7 @@ SUBROUTINE aed_define_organic_matter(data, namlst)
 
    ! Read the namelist
    read(namlst,nml=aed_organic_matter,iostat=status)
-   IF (status /= 0) STOP 'Error reading namelist aed_organic_matter'
+   IF (status /= 0) STOP ! BMT 'Error reading namelist aed_organic_matter'
 
    IF( extra_diag )   diag_level = 10           ! legacy use of extra_diag
 

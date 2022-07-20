@@ -265,14 +265,14 @@ SUBROUTINE aed_phytoplankton_load_params(data, dbase, count, list, settling, res
            ! BMT print*,"nml format parameter file is deprecated. Please update to CSV format"
            tfil = find_free_lun()
            open(tfil,file=dbase, status='OLD',iostat=status)
-           IF (status /= 0) STOP 'Cannot open phyto_data namelist file'
+           IF (status /= 0) STOP ! BMT 'Cannot open phyto_data namelist file'
            read(tfil,nml=phyto_data,iostat=status)
            close(tfil)
        CASE DEFAULT
            ! BMT print *,'Unknown file type "',TRIM(dbase),'"';
             status=1
     END SELECT
-    IF (status /= 0) STOP 'Error reading namelist phyto_data'
+    IF (status /= 0) STOP ! BMT 'Error reading namelist phyto_data'
 
     data%num_phytos = count
     ALLOCATE(data%phytos(count))
@@ -567,7 +567,7 @@ SUBROUTINE aed_define_phytoplankton(data, namlst)
 
    ! Read the namelist, and set module parameters
    read(namlst,nml=aed_phytoplankton,iostat=status)
-   IF (status /= 0) STOP 'Error reading namelist for &aed_phytoplankton'
+   IF (status /= 0) STOP ! BMT 'Error reading namelist for &aed_phytoplankton'
    dtlim = zerolimitfudgefactor
    IF( extra_debug ) extra_diag = .true.       ! legacy use of extra_debug
    IF ( extra_diag ) diag_level = 10

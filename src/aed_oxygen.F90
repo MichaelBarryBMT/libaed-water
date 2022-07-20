@@ -206,7 +206,7 @@ SUBROUTINE aed_define_oxygen(data, namlst)
 
    ! Read the namelist
    read(namlst,nml=aed_oxygen,iostat=status)
-   IF (status /= 0) STOP 'Error reading namelist aed_oxygen'
+   IF (status /= 0) STOP ! BMT 'Error reading namelist aed_oxygen'
 
    ! Store parameter values in the modules own derived type
    ! NB: all rates must be provided in values per day,

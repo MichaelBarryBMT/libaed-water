@@ -157,7 +157,7 @@ SUBROUTINE aed_define_totals(data, namlst)
 
    ! Read the namelist
    read(namlst,nml=aed_totals,iostat=status)
-   IF (status /= 0) STOP 'Error reading namelist aed_totals'
+   IF (status /= 0) STOP ! BMT 'Error reading namelist aed_totals'
 
    data%outputLight = outputLight
 

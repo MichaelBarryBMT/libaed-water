@@ -212,14 +212,14 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
            ! BMT print*,"nml format parameter file is deprecated. Please update to CSV format"
            tfil = find_free_lun()
            open(tfil,file=dbase, status='OLD',iostat=status)
-           IF (status /= 0) STOP 'Error opening zoop_params namelist file'
+           IF (status /= 0) STOP ! BMT 'Error opening zoop_params namelist file'
            read(tfil,nml=zoop_params,iostat=status)
            close(tfil)
        CASE DEFAULT
            ! BMT print *,'Unknown file type "',TRIM(dbase),'"';
             status=1
     END SELECT
-    IF (status /= 0) STOP 'Error reading namelist zoop_params'
+    IF (status /= 0) STOP ! BMT 'Error reading namelist zoop_params'
 
     data%num_zoops = count
     allocate(data%zoops(count))
@@ -325,7 +325,7 @@ SUBROUTINE aed_define_zooplankton(data, namlst)
 
    ! Read the namelist
    read(namlst,nml=aed_zooplankton,iostat=status)
-   IF (status /= 0) STOP 'Error reading namelist aed_zooplankton'
+   IF (status /= 0) STOP ! BMT 'Error reading namelist aed_zooplankton'
 
     data%num_zoops = 0
     data%simZoopFeedback = simZoopFeedback

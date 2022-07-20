@@ -180,7 +180,7 @@ SUBROUTINE aed_define_noncohesive(data, namlst)
 
    ! Read the namelist
    read(namlst,nml=aed_noncohesive,iostat=status)
-   IF (status /= 0) STOP 'ERROR reading namelist aed_noncohesive'
+   IF (status /= 0) STOP ! BMT 'ERROR reading namelist aed_noncohesive'
 
    ! Store parameter values in our own derived type
    data%num_ss = num_ss

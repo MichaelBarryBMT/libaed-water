@@ -161,7 +161,7 @@ SUBROUTINE aed_define_tracer(data, namlst)
 
    ! Read the namelist
    read(namlst,nml=aed_tracer,iostat=status)
-   IF (status /= 0) STOP 'ERROR reading namelist aed_tracer'
+   IF (status /= 0) STOP ! BMT 'ERROR reading namelist aed_tracer'
 
    ! Store parameter values in our own derived type
    data%num_tracers = num_tracers

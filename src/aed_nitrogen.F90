@@ -218,9 +218,9 @@ SUBROUTINE aed_define_nitrogen(data, namlst)
    !---------------------------------------------------------------------------+
    ! Read the namelist
    read(namlst,nml=aed_nitrogen,iostat=status)
-   IF (status /= 0) STOP 'Error reading namelist for &aed_nitrogen'
+   IF (status /= 0) STOP ! BMT 'Error reading namelist for &aed_nitrogen'
 
-   IF(Ranammox>1e-10) STOP 'Ranammox is now deprecated; please replace with kanammox.'
+   IF(Ranammox>1e-10) STOP ! BMT 'Ranammox is now deprecated; please replace with kanammox.'
 
    !---------------------------------------------------------------------------+
    ! Store config options and parameter values in module main data structure

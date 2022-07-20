@@ -177,7 +177,7 @@ SUBROUTINE aed_define_phosphorus(data, namlst)
 
    ! Read the namelist
    read(namlst,nml=aed_phosphorus,iostat=status)
-   IF (status /= 0) STOP 'Error reading namelist for &aed_phosphorus'
+   IF (status /= 0) STOP ! BMT 'Error reading namelist for &aed_phosphorus'
 
    ! Store parameter values in the module level data object
    ! NB: all rates must be provided in values per day,
