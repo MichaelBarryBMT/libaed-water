@@ -477,7 +477,7 @@ SUBROUTINE aed_calculate_benthic_phosphorus(data,column,layer_idx)
    ! Also store sediment flux as diagnostic variable.
    _DIAG_VAR_S_(data%id_sed_frp) = frp_flux * secs_per_day
 
-   _DIAG_VAR_(data%id_frpads_res) = zero_
+   IF(data%simPO4Adsorption) _DIAG_VAR_(data%id_frpads_res) = zero_ ! BMT 06/10/2022
 
 END SUBROUTINE aed_calculate_benthic_phosphorus
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
