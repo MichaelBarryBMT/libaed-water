@@ -640,6 +640,22 @@ SUBROUTINE aed_bio_temp_function(numg, theta, T_std, T_opt, T_max, aTn, bTn, kTn
 !BEGIN
     ! BMT write(*,"(11X,'Solving temperature functions for phytoplankton - ')")
     ! BMT write(*,"(11X,' using the form : f(T) = v^(T-20)-v^(k(T-a))+b')")
+   
+! BMT ************************************************      
+    ! BMT generate fT array
+    AED_REAL,ALLOCATABLE :: fT_BMT(:,:)
+    AED_REAL,PARAMETER :: fT_min = 0.0, fT_max = 45, dT = 0.5
+    INTEGER,PARAMETER :: fT_rows = INT((fT_max - fT_min)/dT)
+    INTEGER :: ii, jj
+    ! BMT open phyto output file for Temperature limitation tool
+    LOGICAL :: exist
+    INQUIRE(file='tmp.tmp', exist=exist)
+    IF (exist) THEN
+        OPEN(unit=997,name='tmp.tmp')
+        CLOSE(997,status='delete')
+    ENDIF
+    OPEN(unit=997,name='tmp.tmp',status='new')
+! BMT ************************************************      
 
     tol   = 0.05
 
@@ -742,12 +758,66 @@ SUBROUTINE aed_bio_temp_function(numg, theta, T_std, T_opt, T_max, aTn, bTn, kTn
         bTn(group) = b
       ENDIF
 
-      IF (kTn(group) < 0.1 .AND. bTn(group) > 100.0) THEN
-         ! BMT print *,'Cannot solve for fT for: ', name(group)
-         STOP
+! BMT ************************************************      
+      ! BMT
+      ! First time around - tell user to use the utility
+      IF (group.eq.1) THEN
+          write(*,*) ' '; write(997,*) ' '
+          write(*,*) 'Phytoplankton temperature limitation parameters: ' ; write(997,*) 'Phytoplankton temperature limitation parameters: '
+          ! Allocate fT array and populate first column (T)
+          ALLOCATE(fT_BMT(fT_rows,numg+1)) ! Temperature + a column for each phyto
+          fT_BMT = 0.0
+          DO ii = 1, fT_rows; fT_BMT(ii,1) = fT_min + (ii-1)*dT; ENDDO
       ENDIF
+      
+      write(*,*) ' '; write(997,*) ' '
+      write(*,*) '    Phytoplankton group: ', trim(name(group)); write(997,*) '    Phytoplankton group: ', trim(name(group))
+      ! Write group data only if T_std, T_opt and T_max are not library values
+      IF ((Ts.ne.0.0).AND.(To.ne.0.0).AND.(Tm.ne.0.0)) THEN ! Library defaults are all zero
+          ! Can't solve
+          IF (kTn(group) < 0.1 .AND. bTn(group) > 100.0) THEN
+             ! BMT print *,'Cannot solve for fT for: ', name(group)
+             write(*,*) '        Cannot resolve temperature function'; write(997,*) '        Cannot resolve temperature function'
+             write(*,*) '        See manual for suggested modifications'; write(997,*) '        See manual for suggested modifications'
+             write(*,*) '        Exiting'; write(997,*) '        Exiting'
+             write(*,*) ' '
+             STOP
+          ! BMT add commentary
+          ELSE
+             write(*,*) '        kTn = ', kTn(group) ; write(997,*) '        kTn = ', kTn(group)
+             write(*,*) '        aTn = ', aTn(group) ; write(997,*) '        aTn = ', aTn(group)
+             write(*,*) '        bTn = ', bTn(group) ; write(997,*) '        bTn = ', bTn(group)
+             write(*,*) '        theta = ', v ; write(997,*) '        theta = ', v
+             write(*,*) '        T_std = ', Ts ; write(997,*) '        T_std = ', Ts
+             write(*,*) '        T_opt = ', To ; write(997,*) '        T_opt = ', To
+             write(*,*) '        T_max = ', Tm ; write(997,*) '        T_max = ', Tm
+             DO ii = 1, fT_rows
+                 IF (fT_BMT(ii,1).le.Ts) fT_BMT(ii,group + 1) = MAX(v**(fT_BMT(ii,1) - 20.0),0.0)
+                 IF ((fT_BMT(ii,1).gt.Ts).AND.(fT_BMT(ii,1).le.Tm)) fT_BMT(ii,group + 1) = MAX(v**(fT_BMT(ii,1) - 20.0) - v**(kTn(group)*(fT_BMT(ii,1) - aTn(group))) + bTn(group),0.0)
+                 IF (fT_BMT(ii,1).gt.Tm) fT_BMT(ii,group + 1) = 0.0
+             ENDDO   
+        ENDIF
+      ELSE
+          write(*,*) '        Temperature limitation set to NONE ' ; write(997,*) '        Temperature limitation set to NONE '
+          fT_BMT(:,group + 1) = 1.0
+      ENDIF
+      
+   ENDDO
 
-    ENDDO
+   ! BMT write out to file
+   write(*,*) ' '; write(997,*) ' '
+   write(*,*) 'Phytoplankton temperature limitation functions: ' ; write(997,*) 'Phytoplankton temperature limitation functions: '
+   write(*, '(a11,a1,<numg>(a,a))') 'Temperature', ',', (trim(name(group)), ',', group = 1, numg)
+   write(997, '(a11,a1,<numg>(a,a))') 'Temperature', ',', (trim(name(group)), ',', group = 1, numg)   
+   DO jj = 1, fT_rows
+       write(*, '(f4.1,a1,<numg>(f7.5,a))') fT_BMT(jj,1), ',', (fT_BMT(jj,group + 1), ',', group = 1, numg)   
+       write(997, '(f4.1,a1,<numg>(f7.5,a))') fT_BMT(jj,1), ',', (fT_BMT(jj,group + 1), ',', group = 1, numg)   
+   ENDDO      
+    
+    ! BMT close temporary file
+    CLOSE(unit=997)
+
+! BMT ************************************************      
 
 END SUBROUTINE aed_bio_temp_function
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
