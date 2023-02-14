@@ -469,7 +469,7 @@ SUBROUTINE aed_define_sedflux(data, namlst)
    ! Register state variables
    ! NOTE the "_sheet_"  which specifies the variable is benthic.
    IF ( Fsed_oxy .GT. MISVAL ) &
-      data%id_Fsed_oxy = aed_define_sheet_diag_variable('Fsed_oxy','mmol O2/m2/d',   &
+      data%id_Fsed_oxy = aed_define_sheet_diag_variable('Fsed_oxy','mmol O2/m2/d',  &
                                           'flux rate of oxygen across the swi')
    IF ( Fsed_dic .GT. MISVAL ) &
       data%id_Fsed_dic = aed_define_sheet_diag_variable('Fsed_dic','mmol C/m2/d',   &
@@ -481,7 +481,7 @@ SUBROUTINE aed_define_sedflux(data, namlst)
       data%id_Fsed_ch4_ebb = aed_define_sheet_diag_variable('Fsed_ch4_ebb','mmol C/m2/d',   &
                                           'flux rate of ch4 bubbles across the swi')
    IF ( Fsed_rsi .GT. MISVAL ) &
-      data%id_Fsed_rsi = aed_define_sheet_diag_variable('Fsed_rsi','mmol Si/m2/d',   &
+      data%id_Fsed_rsi = aed_define_sheet_diag_variable('Fsed_rsi','mmol Si/m2/d',  &
                                           'flux rate of rsi across the swi')
    IF ( Fsed_amm .GT. MISVAL ) &
       data%id_Fsed_amm = aed_define_sheet_diag_variable('Fsed_amm','mmol N/m2/d',   &
@@ -514,7 +514,7 @@ SUBROUTINE aed_define_sedflux(data, namlst)
       data%id_Fsed_dop = aed_define_sheet_diag_variable('Fsed_dop','mmol P/m2/d',   &
                                           'flux rate of dop across the swi')
    IF ( Fsed_feii .GT. MISVAL ) &
-      data%id_Fsed_feii = aed_define_sheet_diag_variable('Fsed_feii','mmol Fe/m2/d', &
+      data%id_Fsed_feii = aed_define_sheet_diag_variable('Fsed_feii','mmol Fe/m2/d',&
                                           'flux rate of feii across the swi')
 
    IF ( data%sed_modl == SED_CONSTANT_2D ) THEN
@@ -535,7 +535,6 @@ SUBROUTINE aed_define_sedflux(data, namlst)
       CALL aed_set_const_var(data%id_Fsed_ch4_ebb)
       CALL aed_set_const_var(data%id_Fsed_feii)
    ENDIF
-
 
 END SUBROUTINE aed_define_sedflux
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -596,6 +595,7 @@ SUBROUTINE aed_initialize_benthic_sedflux(data, column, layer_idx)
 
        !zone = INT(_STATE_VAR_S_(data%id_zones))                     !MH upgrade this for active zones
        sedz = _STATE_VAR_S_(data%id_zones)
+
        IF ( .NOT. in_zone_set(sedz, data%active_zones) ) RETURN
 
        zone = 0
@@ -640,6 +640,7 @@ SUBROUTINE aed_initialize_benthic_sedflux(data, column, layer_idx)
    IF ( data%id_Fsed_ch4  > 0 ) _DIAG_VAR_S_(data%id_Fsed_ch4)  = Fsed_ch4
    IF ( data%id_Fsed_feii > 0 ) _DIAG_VAR_S_(data%id_Fsed_feii) = Fsed_feii
    IF ( data%id_Fsed_ch4_ebb  > 0 ) _DIAG_VAR_S_(data%id_Fsed_ch4_ebb)  = Fsed_ch4_ebb
+
 END SUBROUTINE aed_initialize_benthic_sedflux
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -657,8 +658,7 @@ SUBROUTINE aed_calculate_benthic_sedflux(data,column,layer_idx)
 !   INTEGER :: zone
 !
 !-------------------------------------------------------------------------------
-
-    IF ( data%sed_modl .EQ. SED_CONSTANT .OR. data%sed_modl .EQ. SED_CONSTANT_2D ) &
+   IF ( data%sed_modl .EQ. SED_CONSTANT .OR. data%sed_modl .EQ. SED_CONSTANT_2D ) &
       CALL aed_initialize_benthic_sedflux(data, column, layer_idx)
 
 END SUBROUTINE aed_calculate_benthic_sedflux

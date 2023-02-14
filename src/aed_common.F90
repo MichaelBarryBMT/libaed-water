@@ -40,8 +40,9 @@ MODULE aed_common
 
    USE aed_water
    USE aed_benthic
-   USE aed_riparian
    USE aed_demo
+   USE aed_riparian
+   !BMT USE aed_lighting
    USE aed_dev
 
    IMPLICIT NONE
@@ -58,7 +59,7 @@ MODULE aed_common
 
    PUBLIC aed_initialize, aed_initialize_benthic
    PUBLIC aed_calculate, aed_calculate_surface, aed_calculate_benthic
-   PUBLIC aed_calculate_riparian, aed_calculate_dry
+   PUBLIC aed_calculate_riparian, aed_calculate_dry, aed_calculate_column
    PUBLIC aed_light_extinction, aed_light_shading
    PUBLIC aed_equilibrate, aed_mobility, aed_rain_loss
    PUBLIC aed_bio_drag, aed_particle_bgc
@@ -166,8 +167,9 @@ SUBROUTINE aed_define_model(modeldef, namlst)
    NULLIFY(model)
    model => aed_new_wat_model(modelname)
    IF (.NOT. ASSOCIATED(model)) model => aed_new_ben_model(modelname)
-   IF (.NOT. ASSOCIATED(model)) model => aed_new_rip_model(modelname)
    IF (.NOT. ASSOCIATED(model)) model => aed_new_dmo_model(modelname)
+   IF (.NOT. ASSOCIATED(model)) model => aed_new_rip_model(modelname)
+   ! BMT IF (.NOT. ASSOCIATED(model)) model => aed_new_lgt_model(modelname)
    IF (.NOT. ASSOCIATED(model)) model => aed_new_dev_model(modelname)
 
    IF ( ASSOCIATED(model) ) THEN
@@ -193,6 +195,7 @@ SUBROUTINE aed_define_model(modeldef, namlst)
       last_model => model
    ELSE
       ! BMT  \print *,'*** Unknown module ', TRIM(modelname)
+      STOP
    ENDIF
 END SUBROUTINE aed_define_model
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -203,8 +206,9 @@ SUBROUTINE aed_print_version
 !-------------------------------------------------------------------------------
    CALL aed_print_wat_version
    CALL aed_print_ben_version
-   CALL aed_print_rip_version
    CALL aed_print_dmo_version
+   CALL aed_print_rip_version
+!   CALL aed_print_lgt_version
    CALL aed_print_dev_version
 END SUBROUTINE aed_print_version
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -413,6 +417,24 @@ END SUBROUTINE aed_calculate_riparian
 
 
 !###############################################################################
+SUBROUTINE aed_calculate_column(column, layer_map)
+   !-------------------------------------------------------------------------------
+      TYPE (aed_column_t),INTENT(inout) :: column(:)
+      INTEGER,INTENT(in) :: layer_map(:)
+   !
+   !LOCALS
+      CLASS (aed_model_data_t),POINTER :: model
+   !-------------------------------------------------------------------------------
+      model => model_list
+      DO WHILE (ASSOCIATED(model))
+         CALL model%calculate_column(column, layer_map)
+         model => model%next
+      ENDDO
+   END SUBROUTINE aed_calculate_column
+   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+   !###############################################################################
 SUBROUTINE aed_calculate_dry(column, layer_idx)
 !-------------------------------------------------------------------------------
    TYPE (aed_column_t),INTENT(inout) :: column(:)

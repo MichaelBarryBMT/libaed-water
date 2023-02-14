@@ -204,7 +204,6 @@ SUBROUTINE aed_define_carbon(data, namlst)
    data%simDIC        = .false.
    data%simCH4        = .false.
    data%simCH4ebb     = .false.
-   IF (ebb_model>0) data%simCH4ebb = .true.
 
    !# Read the namelist
    read(namlst,nml=aed_carbon,iostat=status)
@@ -212,6 +211,8 @@ SUBROUTINE aed_define_carbon(data, namlst)
       ! BMT print *,'Error reading namelist for &aed_carbon'
       STOP
    ENDIF
+
+   IF (ebb_model>0) data%simCH4ebb = .true.
 
    !# Store parameter values in modules own derived type
    !  Note: rates are provided in values per day, and
@@ -291,14 +292,14 @@ SUBROUTINE aed_define_carbon(data, namlst)
      data%id_sed_dic = aed_define_sheet_diag_variable('sed_dic','mmol C/m2/d', &
                             'CO2 exchange across sed/water interface')
      data%id_atm_co2 = aed_define_sheet_diag_variable('atm_co2_flux',          &
-                            'mmol C/m2/d', 'CO2 exchange across atm/water interface')
+                            'mmol C/m2/d', 'CO2 exchange across atm/water interface', surf=.TRUE.)
 
      IF( data%simCH4 ) THEN
        data%id_ch4ox   = aed_define_diag_variable('ch4ox','mmol C/m3/d', 'methane oxidation rate')
        data%id_sed_ch4 = aed_define_sheet_diag_variable('ch4_dsf','mmol C/m2/d', &
                             'CH4 exchange across sed/water interface')
        data%id_atm_ch4 = aed_define_sheet_diag_variable('ch4_atm',        &
-                            'mmol C/m2/d', 'CH4 exchange across atm/water interface')
+                            'mmol C/m2/d', 'CH4 exchange across atm/water interface', surf=.TRUE.)
        IF( data%simCH4ebb ) THEN
          data%id_sed_ch4_ebb_3d = aed_define_diag_variable('ch4_ebb_dsfv','mmol C/m3/d', &
                             'CH4 ebullition release rate')
@@ -307,7 +308,7 @@ SUBROUTINE aed_define_carbon(data, namlst)
          data%id_sed_ch4_ebb = aed_define_sheet_diag_variable('ch4_ebb_dsf','mmol C/m2/d', &
                             'CH4 ebullition across sed/water interface')
          data%id_atm_ch4_ebb = aed_define_sheet_diag_variable('ch4_ebb_atm', &
-                            'mmol C/m2/d', 'CH4 ebullition across atm/water interface')
+                            'mmol C/m2/d', 'CH4 ebullition across atm/water interface', surf=.TRUE.)
        ENDIF
      ENDIF
    ENDIF
@@ -459,7 +460,7 @@ SUBROUTINE aed_calculate_surface_carbon(data,column,layer_idx)
          deltapH = 5.
          ! As carbonate alkalinity depends on H+, lets iterate
          iter = 0
-         DO WHILE (abs(deltapH) > 1e-10)
+         DO WHILE (abs(deltapH) > 1e-5)
            ! Use CO2SYS to estimate TA, from past pH
            CALL CO2SYS(1,T,S,zero_,tadum,TCO2,pH,pHdum,co2dum,talk)
            ! Use CO2SYS to re-estimate pH, from TA
@@ -704,7 +705,8 @@ SUBROUTINE aed_calculate_benthic_carbon(data,column,layer_idx)
    ! Set bottom fluxes for the pelagic (flux per surface area, per second)
    ! Increment sediment flux value into derivative of water column variable
    _FLUX_VAR_(data%id_dic) = _FLUX_VAR_(data%id_dic) + (dic_flux)
-   IF( data%simCH4 .and. diag_level>0) _FLUX_VAR_(data%id_ch4) = _FLUX_VAR_(data%id_ch4) + (ch4_flux)
+   IF( data%simCH4 .and. diag_level>0) &
+                               _FLUX_VAR_(data%id_ch4) = _FLUX_VAR_(data%id_ch4) + (ch4_flux)
 
    ! Store dissolved sediment fluxes as diagnostic variables (flux per surface area, per day)
    IF ( diag_level > 0 ) THEN
@@ -802,7 +804,7 @@ SUBROUTINE aed_equilibrate_carbon(data,column,layer_idx)
         deltapH = 5.
         ! As carbonate alkalinity depends on H+, lets iterate
         iter = 0
-        DO WHILE (abs(deltapH) > 1e-10)
+        DO WHILE (abs(deltapH) > 1e-5)
           ! Use CO2SYS to estimate TA, from past pH
           CALL CO2SYS(1,T,S,zero_,tadum,TCO2,pH,pHdum,co2dum,talk)
           ! Use CO2SYS to re-estimate pH, from TA

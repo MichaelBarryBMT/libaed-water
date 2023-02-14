@@ -411,12 +411,12 @@ SUBROUTINE aed_calculate_benthic_noncohesive(data,column,layer_idx)
 
 
       ! Log the flux across the sediment-water interface, cumulating over groups
-      _DIAG_VAR_S_(data%id_ss_swi) = _DIAG_VAR_S_(data%id_ss_swi) + (ss_flux + resus_flux - set_flux) * secs_per_day
+      _DIAG_VAR_S_(data%id_ss_swi) = _DIAG_VAR_S_(data%id_ss_swi) - (ss_flux + resus_flux - set_flux) * secs_per_day
 
       ! Keep track of the cumulative deviation in SWI position due to
       ! resuspension of this particle class
-      _DIAG_VAR_S_(data%id_swi_dz) = _DIAG_VAR_S_(data%id_swi_dz) &
-                                   - ((resus_flux+ss_flux-set_flux) / ((1.-data%sed_porosity) * (data%rho_ss(i)*1e3)) * secs_per_day)
+      _DIAG_VAR_S_(data%id_swi_dz) = _DIAG_VAR_S_(data%id_swi_dz) - &
+                                  ((resus_flux+ss_flux-set_flux) / ((1.-data%sed_porosity) * (data%rho_ss(i)*1e3)) * secs_per_day)
 
       IF ( data%simSedimentMass ) THEN
         ! Remove/add sediment fluxes value from the sediment vars
@@ -454,6 +454,9 @@ SUBROUTINE aed_light_extinction_noncohesive(data,column,layer_idx,extinction)
 !
 !-----------------------------------------------------------------------
 !BEGIN
+
+   IF ( .NOT. ALLOCATED(data%id_ss) ) RETURN
+
   !DO ss_i=1,ubound(data%id_ss,1)
    DO ss_i=1,data%num_ss
       ! Retrieve current (local) state variable values.

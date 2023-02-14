@@ -88,7 +88,7 @@ MODULE aed_csv_reader
 !-------------------------------------------------------------------------------
    PUBLIC aed_csv_read_header, aed_csv_read_row, aed_csv_close, AED_SYMBOL
    PUBLIC extract_double, extract_logical, extract_integer, extract_string
-   PUBLIC copy_name
+   PUBLIC copy_name, indexed_field
 
 CONTAINS
 
@@ -320,6 +320,9 @@ LOGICAL FUNCTION next_symbol(aedr, sym)
       DO WHILE((e1 .LE. aedr%buf_len) .AND. (aedr%buf(e1:e1) .NE. quot))
          e1=e1+1
       ENDDO
+   ELSE IF (aedr%buf(s1:s1) == ',' ) THEN
+      ! We are done
+      e1=s1+1
    ELSE
       e1=s1+1
       DO WHILE((e1 .LE. aedr%buf_len) .AND. (char_in_str(aedr%buf(e1:e1),term) .EQ. 0))
@@ -358,7 +361,7 @@ LOGICAL FUNCTION end_parse(aedr)
 !-------------------------------------------------------------------------------
 !BEGIN
     close(aedr%lun, iostat=iostat)
-    DEALLOCATE(aedr)
+    IF ( ASSOCIATED(aedr) ) DEALLOCATE(aedr)
     end_parse=(iostat .eq. 0)
 END FUNCTION end_parse
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -379,12 +382,16 @@ FUNCTION extract_double(sym) RESULT(num)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-    DO i=1,sym%length
-       tbuf(i:i)=sym%sym(i)
-    ENDDO
-    tbuf(sym%length+1:)=' '
+    IF ( sym%length > 0 ) THEN
+       DO i=1,sym%length
+          tbuf(i:i)=sym%sym(i)
+       ENDDO
+       tbuf(sym%length+1:)=' '
 
-    read(tbuf,*) num
+       read(tbuf,*) num
+    ELSE
+       num = 0.;
+    ENDIF
 END FUNCTION extract_double
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -404,12 +411,16 @@ FUNCTION extract_integer(sym) RESULT(num)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-    DO i=1,sym%length
-       tbuf(i:i)=sym%sym(i)
-    ENDDO
-    tbuf(sym%length+1:)=' '
+    IF ( sym%length > 0 ) THEN
+       DO i=1,sym%length
+          tbuf(i:i)=sym%sym(i)
+       ENDDO
+       tbuf(sym%length+1:)=' '
 
-    read(tbuf,*) num
+       read(tbuf,*) num
+    ELSE
+       num = 0.;
+    ENDIF
 END FUNCTION extract_integer
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -429,12 +440,16 @@ FUNCTION extract_logical(sym) RESULT(res)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-    DO i=1,sym%length
-       tbuf(i:i)=sym%sym(i)
-    ENDDO
-    tbuf(sym%length+1:)=' '
+    IF ( sym%length > 0 ) THEN
+       DO i=1,sym%length
+          tbuf(i:i)=sym%sym(i)
+       ENDDO
+       tbuf(sym%length+1:)=' '
 
-    read(tbuf,*) res
+       res = .FALSE.
+    ELSE
+       read(tbuf,*) res
+    ENDIF
 END FUNCTION extract_logical
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -453,10 +468,14 @@ FUNCTION extract_string(sym) RESULT(str)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-    DO i=1,sym%length
-       str(i:i)=sym%sym(i)
-    ENDDO
-    str(sym%length+1:)=' '
+    IF ( sym%length > 0 ) THEN
+       DO i=1,sym%length
+          str(i:i)=sym%sym(i)
+       ENDDO
+       str(sym%length+1:)=' '
+    ELSE
+       str = ''
+    ENDIF
 END FUNCTION extract_string
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -486,7 +505,7 @@ END SUBROUTINE copy_name
 FUNCTION scan_csv_header(aedr,titles) RESULT(count)
 !-------------------------------------------------------------------------------
 !ARGUMENTS
-    TYPE(AED_READER),POINTER,INTENT(in) :: aedr
+    TYPE(AED_READER),POINTER,INTENT(inout) :: aedr
     CHARACTER(len=32),POINTER,INTENT(out) :: titles(:)
 !
 !LOCALS
@@ -577,11 +596,14 @@ LOGICAL FUNCTION aed_csv_read_row(unit, values)
 !BEGIN
    aedr => units(unit)%p
    ncols = aedr%n_cols
+   NULLIFY(sym%sym)
 
    values(1:ncols)%length = 0
    i = 0
    DO WHILE ( next_symbol(aedr, sym) ) !#
-      IF ( sym%sym(1) .EQ. EOLN ) EXIT
+      IF ( sym%length > 0 ) THEN
+         IF ( sym%sym(1) .EQ. EOLN ) EXIT
+      ENDIF
       i = i + 1
       IF ( i <= ncols ) THEN
          IF ( ASSOCIATED(values(i)%sym) ) NULLIFY( values(i)%sym )
@@ -615,6 +637,35 @@ LOGICAL FUNCTION aed_csv_close(unit)
    NULLIFY(aedr)
    units(unit)%p => aedr
 END FUNCTION aed_csv_close
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+INTEGER FUNCTION indexed_field(s1, s2, n, s3)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CHARACTER(*),INTENT(in) :: s1, s2, s3
+   INTEGER,INTENT(in) :: n
+!LOCALS
+   CHARACTER(len=4)  :: ext
+   CHARACTER(len=64) :: res
+   INTEGER :: idx
+!BEGIN
+!-------------------------------------------------------------------------------
+   DO idx=1,n
+     WRITE(ext, "(i2)") idx
+     ext = TRIM(ADJUSTL(ext))
+
+     res = TRIM(s1) // TRIM(ext) // TRIM(s2)
+!    print *, "idx = ",idx, "res = '", TRIM(res), "'"
+     IF ( TRIM(res) .eq. TRIM(s3) ) THEN
+       indexed_field = idx
+       RETURN
+     ENDIF
+   ENDDO
+
+   indexed_field = -1
+END FUNCTION indexed_field
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

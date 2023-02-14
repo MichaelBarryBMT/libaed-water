@@ -78,6 +78,7 @@ MODULE aed_core
          procedure :: calculate_surface  => aed_calculate_surface
          procedure :: calculate          => aed_calculate
          procedure :: calculate_benthic  => aed_calculate_benthic
+         procedure :: calculate_column   => aed_calculate_column
          procedure :: calculate_riparian => aed_calculate_riparian
          procedure :: calculate_dry      => aed_calculate_dry
          procedure :: equilibrate        => aed_equilibrate
@@ -205,6 +206,7 @@ SUBROUTINE display_var(var, idx)
 !
 !LOCALS
    CHARACTER(80) :: line
+   CHARACTER(80) :: l2
    CLASS(aed_prefix_list_t),POINTER :: req => null()
 !
 !-------------------------------------------------------------------------------
@@ -219,48 +221,60 @@ SUBROUTINE display_var(var, idx)
 
 !  line = line(1:4) // "  " // TRIM(var%name) // '                    '
    line = TRIM(var%name) // '                    '
+   l2 = line(1:20)
    IF ( var%found .AND. ASSOCIATED(var%model) ) THEN
-      line = line(1:20) // ' ' // var%model%aed_model_name
+      line = l2(1:20) // ' ' // var%model%aed_model_name
    ELSE
-      line = line(1:20) // ' ???'
+      line = l2(1:20) // ' ???'
 !     print log,'Requested variable ', TRIM(var%name), ' not defined.'
    ENDIF
    line = TRIM(line) // '             '
 
+   l2 = line(1:40)
    IF ( var%sheet ) THEN
-     IF ( ASSOCIATED(var%model) .AND. var%model%aed_model_zone_avg ) THEN
-      line = line(1:40) // ' SZ '
-     ELSE
-      line = line(1:40) // ' 2D '
-     ENDIF
+      !# IF ( ASSOCIATED(var%model) .and. var%model%aed_model_zone_avg ) THEN
+      !# The above will segfault if var%model is null - like pascal, it seems fortran
+      !# also evaluates both conditions regardless
+      IF ( ASSOCIATED(var%model) ) THEN
+         IF ( var%model%aed_model_zone_avg ) THEN
+            line = l2(1:40) // ' SZ'
+         ELSE
+            line = l2(1:40) // ' 2D'
+         ENDIF
+      ELSE
+         line = l2(1:40) // ' 2D'
+      ENDIF
    ELSE
-      line = line(1:40) // ' 3D '
+      line = l2(1:40) // ' 3D'
    ENDIF
 
    req => var%req
 
    IF ( var%extern ) THEN
-      line = TRIM(line) // '  ---'
+      line = TRIM(line) // '   ---'
    ELSE IF ( ASSOCIATED(req) ) THEN
-      line = TRIM(line) // '  ' // req%aed_model_prefix
+      line = TRIM(line) // '   ' // req%aed_model_prefix
       req => req%next
    ENDIF
    IF ( ASSOCIATED(req) ) THEN
-      line = TRIM(line) // "  " // req%aed_model_prefix
+      line = TRIM(line) // "   " // req%aed_model_prefix
 
       DO WHILE ( ASSOCIATED(req%next) )
          req => req%next
          IF (LEN_TRIM(line) >= 75 .AND. ASSOCIATED(req%next)) THEN
              ! BMT write(log, *) TRIM(line),","
              line(1:51)=' '
-             line = line(1:51) // req%aed_model_prefix
+             l2 = line(1:51)
+             line = l2(1:51) // req%aed_model_prefix
          ELSE
              line = TRIM(line) // ", " // req%aed_model_prefix
          ENDIF
       ENDDO
    ENDIF
-   IF ( var%zavg_req .and. .NOT. var%model%aed_model_zone_avg) THEN
-      line = TRIM(line) // "     (zavg req)"
+   IF ( var%zavg_req ) THEN
+      IF ( ASSOCIATED(var%model) .AND. .NOT. var%model%aed_model_zone_avg ) THEN
+         line = TRIM(line) // "     (zavg req)"
+      ENDIF
    ENDIF
 
    ! BMT write(log, *) TRIM(line)
@@ -359,7 +373,7 @@ SUBROUTINE extend_allocated_variables(pcount)
 !
 !LOCALS
    TYPE(aed_variable_t),DIMENSION(:),ALLOCATABLE :: tmp
-   INTEGER count
+   INTEGER count, i
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -376,6 +390,9 @@ SUBROUTINE extend_allocated_variables(pcount)
       ALLOCATE(all_vars(1:count))
    ENDIF
 
+   DO i=1,count
+      NULLIFY(all_vars(a_vars+i)%model)
+   ENDDO
    all_vars(a_vars+1:a_vars+count)%initial = nan_
    all_vars(a_vars+1:a_vars+count)%minimum = nan_
    all_vars(a_vars+1:a_vars+count)%maximum = nan_
@@ -487,7 +504,9 @@ FUNCTION aed_create_variable(name, longname, units, place) RESULT(ret)
       all_vars(ret)%name = tname
 !print*,"CREATE Variable '",TRIM(tname),"' long name '",TRIM(longname),"' with units '",TRIM(units),"' at ", ret
 
-      all_vars(ret)%model => current_model
+!     IF ( ASSOCIATED(current_model) ) THEN
+         all_vars(ret)%model => current_model
+!     ENDIF
       all_vars(ret)%longname = longname
       all_vars(ret)%units = units
 
@@ -914,6 +933,18 @@ SUBROUTINE aed_calculate_benthic(data,column,layer_idx)
 !print*,"Default aed_calculate_benthic ", TRIM(data%aed_model_name)
 END SUBROUTINE aed_calculate_benthic
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed_calculate_column(data,column,layer_map)
+   !-------------------------------------------------------------------------------
+      CLASS (aed_model_data_t),INTENT(in) :: data
+      TYPE (aed_column_t),INTENT(inout) :: column(:)
+      INTEGER,INTENT(in) :: layer_map(:)
+!-------------------------------------------------------------------------------
+!print*,"Default aed_calculate_benthic ", TRIM(data%aed_model_name)
+END SUBROUTINE aed_calculate_column
+   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 !###############################################################################

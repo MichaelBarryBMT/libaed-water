@@ -67,6 +67,8 @@ MODULE aed_pesticides
       AED_REAL          :: K_gpp
       AED_REAL          :: Fsed_pst
       AED_REAL          :: coef_light_kb_vis, coef_light_kb_uva, coef_light_kb_uvb  !-- Light inactivation
+      AED_REAL          :: porosity, Kpst_sorb_sed, Kdsf
+      AED_REAL          :: pst_initial, pst_initial_sed
       INTEGER           :: sorption_model
       INTEGER           :: num_sorb
       TYPE(pest_sorb_t) :: sorbents(MAX_PSTC_SORB)
@@ -77,24 +79,23 @@ MODULE aed_pesticides
    END TYPE
    !  %% END NAMELIST   %%  pesticide_param_t
 
-
    TYPE,extends(aed_model_data_t) :: aed_pesticides_data_t
       !# Variable identifiers
-      INTEGER,ALLOCATABLE :: id_pstd(:)                    ! Column ID of pesticides
-      INTEGER,ALLOCATABLE :: id_psta(:,:)                  ! Column ID of pesticides attached to components
-      INTEGER,ALLOCATABLE :: id_psts(:)                    ! Column ID of pesticides in sediment
-      INTEGER,ALLOCATABLE :: id_ss(:)                      ! Column ID of ss if chosen
+      INTEGER,ALLOCATABLE :: id_pstd(:)             ! Column ID of pesticides
+      INTEGER,ALLOCATABLE :: id_psta(:,:)           ! Column ID of pesticides attached to components
+      INTEGER,ALLOCATABLE :: id_psts(:),id_pstw(:)  ! Column ID of pesticides in sediment
+      INTEGER,ALLOCATABLE :: id_ss(:)               ! Column ID of ss, if chosen
 
       ! Diagnostic IDs for processes
       INTEGER,ALLOCATABLE :: id_atmvolat(:), id_sedflux(:), id_sorption(:),    &
                              id_photolysis(:), id_hydrolysis(:), id_uptake(:), &
-                             id_settling(:), id_resus(:), id_total(:)
+                             id_settling(:), id_resus(:), id_total(:), id_tot_s(:)
 
       INTEGER  :: id_oxy, id_pH,  id_doc, id_tss           ! Dependency ID
       INTEGER  :: id_tem, id_sal, id_gpp                   ! Environmental IDs (3D)
       INTEGER  :: id_par, id_nir, id_uva, id_uvb           ! Environmental IDs (3D)
       INTEGER  :: id_I_0                                   ! Environmental ID (2D)
-      INTEGER  :: resuspension
+      INTEGER  :: id_l_resus, resuspension
       INTEGER  :: id_epsilon, id_taub
 
       !# Model parameters
@@ -102,6 +103,7 @@ MODULE aed_pesticides
       TYPE(pesticide_data_t),DIMENSION(:),ALLOCATABLE :: pesticides
 
       INTEGER  :: pst_piston_model,pst_sorption_model
+      LOGICAL  :: initSedimentConc  = .false.
      !INTEGER  :: num_ss
      !AED_REAL,ALLOCATABLE  :: Fsed_pst(:)
      !AED_REAL,ALLOCATABLE  :: Rhydrol(:),Rphoto(:),Ruptake(:),theta_hydrol(:),K_gpp(:)
@@ -119,6 +121,7 @@ MODULE aed_pesticides
          PROCEDURE :: calculate         => aed_calculate_pesticides
          PROCEDURE :: calculate_surface => aed_calculate_surface_pesticides
          PROCEDURE :: calculate_benthic => aed_calculate_benthic_pesticides
+         PROCEDURE :: initialize_benthic=> aed_initialize_benthic_pesticides
          PROCEDURE :: equilibrate       => aed_equilibrate_pesticides
          PROCEDURE :: mobility          => aed_mobility_pesticides
          PROCEDURE :: light_extinction  => aed_light_extinction_pesticides
@@ -148,7 +151,6 @@ SUBROUTINE aed_define_pesticides(data, namlst)
 !ARGUMENTS
    INTEGER,INTENT(in) :: namlst
    CLASS (aed_pesticides_data_t),INTENT(inout) :: data
-
 !
 !LOCALS
    INTEGER  :: status
@@ -170,12 +172,14 @@ SUBROUTINE aed_define_pesticides(data, namlst)
    LOGICAL  :: simVolatilisation = .false.
    LOGICAL  :: simPhotolysis     = .false.
    LOGICAL  :: simUptake         = .false.
+   LOGICAL  :: initSedimentConc  = .false.
    CHARACTER(len=64)  :: oxy_variable = ''
    CHARACTER(len=64)  :: gpp_variable = ''
+   CHARACTER(len=64)  :: resus_link   ='NCS_resus'
    CHARACTER(len=128) :: dbase='aed_pesticide_pars.csv'
 
 ! From Module Globals
-   LOGICAL  :: extra_diag = .FALSE.      !## Obsolete Use diag_level = 10
+   LOGICAL  :: extra_diag = .FALSE.           !## Obsolete Use diag_level = 10
 !  INTEGER  :: diag_level = 10                ! 0 = no diagnostic outputs
 !                                             ! 1 = basic diagnostic outputs
 !                                             ! 2 = flux rates, and supporitng
@@ -183,12 +187,16 @@ SUBROUTINE aed_define_pesticides(data, namlst)
 !                                             !10 = all debug & checking outputs
 !  %% END NAMELIST   %% /aed_pesticides/
 
-   NAMELIST /aed_pesticides/ num_pesticides, the_pesticides, &
-                             oxy_variable,         &
-             simSediment,      &
-            resuspension,  &
-            dbase, extra_diag, diag_level, &
-            gpp_variable
+   NAMELIST /aed_pesticides/ num_pesticides, the_pesticides,       &
+                             oxy_variable,                         &
+                             simSediment, initSedimentConc,        &
+                             simResuspension, resuspension,        &
+                             simVolatilisation, pst_piston_model,  &
+                             simSorption,                          &
+                             simPhotolysis,                        &
+                             simUptake, gpp_variable,resus_link,   &
+                             dbase, diag_level
+
 !-----------------------------------------------------------------------
 !BEGIN
    ! BMT print *,"        aed_pesticides configuration"
@@ -218,6 +226,9 @@ SUBROUTINE aed_define_pesticides(data, namlst)
 
    ! Set module values to user provided numbers in the namelist
    data%resuspension = resuspension
+   IF ( .NOT. simResuspension ) resus_link = ''
+
+   data%initSedimentConc = initSedimentConc
 
    ! Store pesticide specific parameter values in module data type
    !   NB: all rates must be provided in values per day,
@@ -244,6 +255,14 @@ SUBROUTINE aed_define_pesticides(data, namlst)
    IF (oxy_variable .NE. '') data%id_oxy = aed_locate_variable(oxy_variable)
    IF (gpp_variable .NE. '') data%id_gpp = aed_locate_variable(gpp_variable)
 
+   !-- Locate and check for link variable
+   IF ( resuspension>0 .AND. .NOT.resus_link .EQ. '' ) THEN
+      data%id_l_resus   = aed_locate_sheet_variable(TRIM(resus_link))
+   ELSE
+      data%id_l_resus   = 0
+      data%resuspension = 0.
+   ENDIF
+
    ! Register environmental dependencies
    data%id_I_0 = aed_locate_sheet_global('par_sf')
    data%id_tem = aed_locate_global('temperature')
@@ -261,13 +280,14 @@ END SUBROUTINE aed_define_pesticides
 
 
 !###############################################################################
-INTEGER FUNCTION load_csv(dbase, pd)
+INTEGER FUNCTION load_csv(dbase, pd, dbsize)
 !-------------------------------------------------------------------------------
    USE aed_csv_reader
 !-------------------------------------------------------------------------------
 !ARGUMENTS
    CHARACTER(len=*),INTENT(in) :: dbase
    TYPE(pesticide_data_t) :: pd(MAX_PSTC_TYPES)
+   INTEGER,INTENT(out) :: dbsize
 !
 !LOCALS
    INTEGER :: unit, nccols, ccol, dcol
@@ -280,6 +300,7 @@ INTEGER FUNCTION load_csv(dbase, pd)
 !
 !BEGIN
 !-------------------------------------------------------------------------------
+   dbsize = 0
    unit = aed_csv_read_header(dbase, csvnames, nccols)
    IF (unit <= 0) THEN
       load_csv = -1
@@ -301,6 +322,13 @@ INTEGER FUNCTION load_csv(dbase, pd)
             CASE ('theta_hydrol')      ; pd(dcol)%theta_hydrol      = extract_double(values(ccol))
             CASE ('K_gpp')             ; pd(dcol)%K_gpp             = extract_double(values(ccol))
             CASE ('Fsed_pst')          ; pd(dcol)%Fsed_pst          = extract_double(values(ccol))
+
+            CASE ('porosity')          ; pd(dcol)%porosity          = extract_double(values(ccol))
+            CASE ('pst_initial')       ; pd(dcol)%pst_initial       = extract_double(values(ccol))
+            CASE ('pst_initial_sed')   ; pd(dcol)%pst_initial_sed   = extract_double(values(ccol))
+            CASE ('Kpst_sorb_sed')     ; pd(dcol)%Kpst_sorb_sed     = extract_double(values(ccol))
+            CASE ('Kdsf')              ; pd(dcol)%Kdsf              = extract_double(values(ccol))
+
             CASE ('coef_light_kb_vis') ; pd(dcol)%coef_light_kb_vis = extract_double(values(ccol))
             CASE ('coef_light_kb_uva') ; pd(dcol)%coef_light_kb_uva = extract_double(values(ccol))
             CASE ('coef_light_kb_uvb') ; pd(dcol)%coef_light_kb_uvb = extract_double(values(ccol))
@@ -327,6 +355,7 @@ INTEGER FUNCTION load_csv(dbase, pd)
    IF (ASSOCIATED(csvnames)) DEALLOCATE(csvnames)
    IF (ALLOCATED(values))    DEALLOCATE(values)
 
+   dbsize = nccols-1
    load_csv = ret
 END FUNCTION load_csv
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -338,44 +367,52 @@ SUBROUTINE aed_pesticides_load_params(data, dbase, count, list)
 !ARGUMENTS
    CLASS (aed_pesticides_data_t),INTENT(inout) :: data
    CHARACTER(len=*),INTENT(in) :: dbase
-   INTEGER,INTENT(in) :: count
+   INTEGER,INTENT(inout) :: count
    INTEGER,INTENT(in) :: list(*)
 !
 !LOCALS
-   INTEGER  :: status
+   INTEGER  :: status = 0
 
-   INTEGER  :: i,tfil,ns
+   INTEGER  :: i,tfil,ns, dbsize = 0
    AED_REAL :: min_conc
 
    CHARACTER(4) :: pst_name
 
-   TYPE(pesticide_data_t) :: pd(MAX_PSTC_TYPES)
+   TYPE(pesticide_data_t),ALLOCATABLE :: pd(:)
    NAMELIST /pesticide_data/ pd   ! %% pesticide_param_t - see above
 !-------------------------------------------------------------------------------
 !BEGIN
-    min_conc = 1e-8
+    min_conc = zero_ !1e-8
+    ALLOCATE(pd(MAX_PSTC_TYPES))
     SELECT CASE (param_file_type(dbase))
        CASE (CSV_TYPE)
-           status = load_csv(dbase, pd)
+           status = load_csv(dbase, pd, dbsize)
        CASE (NML_TYPE)
            ! BMT print *,'NML file type for pesticides is not supported, please convert to CSV'
+!          pesticide_data%name = ''
 !          tfil = find_free_lun()
 !          open(tfil,file=dbase, status='OLD',iostat=status)
 !          IF (status /= 0) STOP 'Error opening namelist pesticide_data'
 !          read(tfil,nml=pesticide_data,iostat=status)
 !          close(tfil)
+!          dbsize = 0
+!          DO i=1,MAX_PSTC_TYPES
+!             IF (pesticide_data(i)%name == '') EXIT
+!             dbsize = dbsize + 1
+!          ENDDO
        CASE DEFAULT
            ! BMT print *,'Unknown file type "',TRIM(dbase),'"'; 
             status=1
     END SELECT
     IF (status /= 0) STOP ! BMT  'Error reading namelist pesticide_data'
 
-    data%num_pesticides = count
+    data%num_pesticides = 0
     ALLOCATE(data%pesticides(count))
     ALLOCATE(data%id_pstd(count))
     ALLOCATE(data%id_psta(count,10)) !need to get max num_sorb from pd
     IF (data%simSediment) THEN
        ALLOCATE(data%id_psts(count))
+       ALLOCATE(data%id_pstw(count))
     ENDIF
 
     IF ( diag_level >= 2 ) THEN
@@ -388,9 +425,13 @@ SUBROUTINE aed_pesticides_load_params(data, dbase, count, list)
        ALLOCATE(data%id_hydrolysis(count))
        ALLOCATE(data%id_uptake(count))
        ALLOCATE(data%id_total(count))
+       ALLOCATE(data%id_tot_s(count))
     ENDIF
 
     DO i=1,count
+       IF ( list(i) < 1 .OR. list(i) > dbsize ) EXIT  !# bad index, exit the loop
+       data%num_pesticides = data%num_pesticides + 1
+
        ! Assign parameters from database to simulated groups
        data%pesticides(i) = pd(list(i))
 
@@ -403,43 +444,100 @@ SUBROUTINE aed_pesticides_load_params(data, dbase, count, list)
        ! Register group as a state variable
        data%id_pstd(i) = aed_define_variable(                                  &
                              TRIM(data%pesticides(i)%name)//'_d',              &
-                             'mmol/m3', 'pesticide dissolved concentration',   &
-                             min_conc,                                         &
+                             'mg/m3', 'pesticide dissolved concentration',   &
+                             data%pesticides(i)%pst_initial ,                  &
                              minimum=min_conc)
 
-       ! Check if we need to registrer a variable for the sorbed fraction(s)
+       ! Check if we need to register a variable for the sorbed fraction(s)
        IF (data%pesticides(i)%num_sorb > 0) THEN
          pst_name = '0'
          DO ns = 1, data%pesticides(i)%num_sorb
            pst_name(1:1) = CHAR(ICHAR('0') + ns)
-           data%id_psta(i,ns) = aed_define_variable(                             &
-                             TRIM(data%pesticides(i)%name)//'_'//TRIM(pst_name), &
-                             'mmol/m3', 'pesticide sorbed concentration',        &
-                             min_conc,                                           &
-                             minimum=min_conc,                                   &
+           data%id_psta(i,ns) = aed_define_variable(                            &
+                             TRIM(data%pesticides(i)%name)//'_'//TRIM(pst_name),&
+                             'mg/m3', 'pesticide sorbed concentration',       &
+                             min_conc,                                          &
+                             minimum=min_conc,                                  &
                              mobility = zero_)
           ENDDO
        ENDIF
 
        IF (data%simSediment) THEN
-          data%id_psts(i) = aed_define_sheet_variable( TRIM(data%pesticides(i)%name)//'_s', 'mmol/m2', 'pesticides in sediment')
-          PRINT *,'WARNING: simSediment is not complete'
+          data%id_psts(i) = aed_define_sheet_variable( TRIM(data%pesticides(i)%name)//'_sed', 'mg/m2', 'sorbed pesticides in sediment',data%pesticides(i)%pst_initial_sed*0.5 )
+          data%id_pstw(i) = aed_define_sheet_variable( TRIM(data%pesticides(i)%name)//'_pw', 'mg/m2', 'porewater pesticides in sediment',data%pesticides(i)%pst_initial_sed*0.5)
        ENDIF
 
        !data%id_total(i) = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_t', 'orgs/m3', 'total')
        IF ( diag_level >= 2 ) THEN
-         data%id_atmvolat(i)  = aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_atm', 'mmol/m2/d', 'volatilisation')
-         data%id_sedflux(i)   = aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_dsf', 'mmol/m2/d', 'dissolved sediment flux')
-         data%id_resus(i)     = aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_res', 'mmol/m2/d', 'resuspension flux')
-         data%id_settling(i)  = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_set', 'mmol/m3/d', 'settling rate')
-         data%id_sorption(i)  = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_srp', 'mmol/m3/d', 'sorption rate')
-         data%id_photolysis(i)= aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_pht', 'mmol/m3/d', 'photolysis rate')
-         data%id_hydrolysis(i)= aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_hyd', 'mmol/m3/d', 'hydrolysis rate')
-         data%id_uptake(i)    = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_upt', 'mmol/m3/d', 'uptake rate')
-         data%id_total(i)     = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_tot', 'mmol/m3'  , 'total pesticide concentration')
+         data%id_sedflux(i)   = &
+                aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_dsf', 'mg/m2/d', 'dissolved sediment flux')
+         IF (data%simVolatilisation) data%id_atmvolat(i)  = &
+                aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_atm', 'mg/m2/d', 'volatilisation')
+         IF (data%simResuspension) data%id_resus(i)     = &
+                aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_res', 'mg/m2/d', 'resuspension flux')
+         data%id_settling(i)  = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_set', 'mg/m3/d', 'settling rate')
+         data%id_sorption(i)  = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_srp', 'mg/m3/d', 'sorption rate')
+         data%id_photolysis(i)= aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_pht', 'mg/m3/d', 'photolysis rate')
+         data%id_hydrolysis(i)= aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_hyd', 'mg/m3/d', 'hydrolysis rate')
+         data%id_uptake(i)    = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_upt', 'mg/m3/d', 'uptake rate')
+         data%id_total(i)     = &
+                aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_tot', 'mg/m3'  , 'total pesticide concentration')
+         IF (data%simSediment) data%id_tot_s(i)     = &
+                aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_tot_sed', 'mg/m2'  , 'total pesticide concentration in the sediment')
        ENDIF
    ENDDO
+   DEALLOCATE(pd)
 END SUBROUTINE aed_pesticides_load_params
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+!###############################################################################
+SUBROUTINE aed_initialize_benthic_pesticides(data, column, layer_idx)
+!-------------------------------------------------------------------------------
+! Routine to initialize pesticides mass from spatial conc map
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CLASS (aed_pesticides_data_t),INTENT(in) :: data
+   TYPE (aed_column_t),INTENT(inout) :: column(:)
+   INTEGER,INTENT(in) :: layer_idx
+!
+!LOCALS
+   INTEGER  :: pst_i
+   AED_REAL :: matz, pest_sed_w, pest_sed_d, PSTtot, PSTpar, PSTdis
+   AED_REAL :: porosity, density, KPSTp
+
+!-------------------------------------------------------------------------------
+!BEGIN
+
+   IF (.NOT. data%simSediment) RETURN
+
+   ! Update sediment conc units after initialisation
+   DO pst_i=1,data%num_pesticides
+
+     ! Sorption
+     porosity = data%pesticides(pst_i)%porosity
+     density = 2.5 !kg/L
+     KPSTp = data%pesticides(pst_i)%Kpst_sorb_sed
+
+     PSTtot = data%pesticides(pst_i)%pst_initial_sed
+     ! Check if user wishes to initialise from spatial map
+     IF( data%initSedimentConc) THEN
+       PSTtot = _DIAG_VAR_S_(data%id_tot_s(pst_i))      ! read in mg/kg
+     ENDIF
+     PSTdis = MAX(MIN(1/(porosity+density*((1-porosity)*KPSTp)),1.),0.)
+     PSTpar = (one_ - PSTdis) !fS()
+     PSTpar = PSTtot * PSTpar
+     PSTdis = PSTtot - PSTpar
+
+     ! Update the pools after partitoning calculation completed
+     pest_sed_w = PSTdis  /porosity
+     pest_sed_d = PSTpar  /(1-porosity)
+     _STATE_VAR_S_(data%id_psts(pst_i)) = pest_sed_d ! pesticide (sediment solids)
+     _STATE_VAR_S_(data%id_pstw(pst_i)) = pest_sed_w ! pesticide (sediment porewater)
+
+   ENDDO
+END SUBROUTINE aed_initialize_benthic_pesticides
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -487,15 +585,15 @@ SUBROUTINE aed_calculate_surface_pesticides(data,column,layer_idx)
         vel=vel,depth=depth,schmidt_model=2,piston_model=data%pst_piston_model)
 
       volat = k600 * pst
+
+      !-----------------------------------------------
+      ! Set surface exchange value (mmmol/m2/s) for AED ODE solution
+      _FLUX_VAR_T_(data%id_pstd(pst_i)) = volat
+
+      !-----------------------------------------------
+      ! Set surface exchange value (mmmol/m2/d) as a diagnostic
+      _DIAG_VAR_S_(data%id_atmvolat(pst_i)) = volat * secs_per_day
     ENDIF
-
-    !-----------------------------------------------
-    ! Set surface exchange value (mmmol/m2/s) for AED ODE solution
-    _FLUX_VAR_T_(data%id_pstd(pst_i)) = volat
-
-    !-----------------------------------------------
-    ! Set surface exchange value (mmmol/m2/d) as a diagnostic
-    _DIAG_VAR_S_(data%id_atmvolat(pst_i)) = volat * secs_per_day
 
   ENDDO
 
@@ -615,7 +713,7 @@ SUBROUTINE aed_calculate_pesticides(data,column,layer_idx)
 
       DO sorp_i=1,data%pesticides(pst_i)%num_sorb
         pest_a = _STATE_VAR_(data%id_psta(pst_i,sorp_i))
-        _FLUX_VAR_(data%id_psta(pst_i,sorp_i)) = _FLUX_VAR_(data%id_psta(pst_i,sorp_i))        &
+        _FLUX_VAR_(data%id_psta(pst_i,sorp_i)) = _FLUX_VAR_(data%id_psta(pst_i,sorp_i)) &
                                       -  (hydrolysis + photolysis/2.)*pest_a
         _DIAG_VAR_(data%id_total(pst_i)) = _DIAG_VAR_(data%id_total(pst_i)) + pest_a
       ENDDO
@@ -626,8 +724,10 @@ SUBROUTINE aed_calculate_pesticides(data,column,layer_idx)
       ! SET DIAGNOSTICS
 
       IF ( diag_level >= 2 ) THEN
-        _DIAG_VAR_(data%id_hydrolysis(pst_i)) = hydrolysis * (_DIAG_VAR_(data%id_total(pst_i))+pest_d) * secs_per_day
-        _DIAG_VAR_(data%id_photolysis(pst_i)) = photolysis * (_DIAG_VAR_(data%id_total(pst_i))/2.+pest_d) * secs_per_day
+        _DIAG_VAR_(data%id_hydrolysis(pst_i)) = &
+            hydrolysis * (_DIAG_VAR_(data%id_total(pst_i))+pest_d) * secs_per_day
+        _DIAG_VAR_(data%id_photolysis(pst_i)) = &
+            photolysis * (_DIAG_VAR_(data%id_total(pst_i))/2.+pest_d) * secs_per_day
         _DIAG_VAR_(data%id_uptake(pst_i)) = uptake * pest_d * secs_per_day
       ENDIF
 
@@ -651,53 +751,108 @@ SUBROUTINE aed_calculate_benthic_pesticides(data,column,layer_idx)
 !LOCALS
    AED_REAL :: ss       ! State
    INTEGER  :: pst_i, ss_i
-   AED_REAL :: diss_flux, sett_flux, kin_flux
-   AED_REAL :: pest_d, pest_sed_d
+   AED_REAL :: diss_flux, sett_flux, part_flux, hydrolysis, resus_flux
+   AED_REAL :: pest_d, pest_sed_d, pest_sed_w
+   AED_REAL :: PSTtot, PSTpar, PSTdis
 
-   AED_REAL :: bottom_stress, dummy_tau
+   AED_REAL :: bottom_stress, dummy_tau, temp
+   AED_REAL :: porosity, density, KPSTp
 
    ! Parameters
 !
 !-------------------------------------------------------------------------------
 !BEGIN
    diss_flux = zero_
+   part_flux = zero_
 
    IF (data%simSediment) THEN
+
+      temp = _STATE_VAR_(data%id_tem)
+
       ! Dynamic sediment pool of pesticide that increase and decrease
-
       DO pst_i=1,data%num_pesticides
-         ! Retrieve current (local) state variable values.
-         pest_d = _STATE_VAR_(data%id_pstd(pst_i))
 
-         pest_sed_d = _STATE_VAR_S_(data%id_psts(pst_i)) ! pesticide (sediment pool)
+         ! Retrieve current (local) state variable values
+         pest_d     = _STATE_VAR_(data%id_pstd(pst_i))   ! pesticide (bottom water)
+         pest_sed_d = _STATE_VAR_S_(data%id_psts(pst_i)) ! pesticide (sediment solids)
+         pest_sed_w = _STATE_VAR_S_(data%id_pstw(pst_i)) ! pesticide (sediment porewater)
 
-         diss_flux = data%pesticides(pst_i)%Fsed_pst
+         ! Sorption
+         porosity = data%pesticides(pst_i)%porosity
+         density = 2.5 !kg/L
+         KPSTp = data%pesticides(pst_i)%Kpst_sorb_sed
 
-         ! Org flux to / from the sediment (orgs/m2/s)
-  !       _FLUX_VAR_B_(data%id_ps(pst_i)) = _FLUX_VAR_B_(data%id_ps(pst_i)) - diss_flux
+         PSTtot = pest_sed_w*porosity + pest_sed_d*(1-porosity)
+         PSTdis = MAX(MIN(1/(porosity+density*((1-porosity)*KPSTp)),1.),0.)
+         PSTpar = (one_ - PSTdis) !fS()
+         PSTpar = PSTtot * PSTpar
+         PSTdis = PSTtot - PSTpar
 
-         ! Add to respective pools in water (free/attached)
+         ! Update the pools after partitoning calculation completed
+         pest_sed_w = PSTdis  /porosity
+         pest_sed_d = PSTpar  /(1-porosity)
+         _STATE_VAR_S_(data%id_psts(pst_i)) = pest_sed_d
+         _STATE_VAR_S_(data%id_pstw(pst_i)) = pest_sed_w
+
+         ! Sedimentation flux
+         part_flux = - _DIAG_VAR_(data%id_settling(pst_i)) / secs_per_day
+
+         ! Resuspension flux
+         resus_flux = zero_
+         IF( data%resuspension > 0 ) THEN
+           resus_flux = _DIAG_VAR_S_(data%id_l_resus) * pest_sed_d    ! g/m2/s * gPST/gSed
+           IF ( diag_level >= 2 ) &
+             _DIAG_VAR_S_ (data%id_resus(pst_i)) = resus_flux * secs_per_day
+         ENDIF
+
+         ! Now set kinetic flux for breakdown
+         hydrolysis = data%pesticides(pst_i)%Rhydrol * (data%pesticides(pst_i)%theta_hydrol**(temp-20.0))
+
+         ! Dissolved pesticide flux to / from the sediment
+         diss_flux = data%pesticides(pst_i)%Fsed_pst &
+                     * ( PSTdis / (MAX(data%pesticides(pst_i)%Kdsf,1e-3) + PSTdis) )
+
+         ! Update pools
+         _FLUX_VAR_B_(data%id_pstw(pst_i)) = _FLUX_VAR_B_(data%id_pstw(pst_i)) - diss_flux - hydrolysis*pest_sed_w
+         _FLUX_VAR_B_(data%id_psts(pst_i)) = _FLUX_VAR_B_(data%id_psts(pst_i)) + part_flux - hydrolysis*pest_sed_d - resus_flux
+
+         ! Add to respective pools in water (dissolved)
          _FLUX_VAR_(data%id_pstd(pst_i)) = _FLUX_VAR_(data%id_pstd(pst_i)) + diss_flux
+         DO ss_i=1,data%pesticides(pst_i)%num_sorb
+           _FLUX_VAR_(data%id_psta(pst_i,ss_i)) = _FLUX_VAR_(data%id_psta(pst_i,ss_i)) &
+                                   + resus_flux/data%pesticides(pst_i)%num_sorb
+         ENDDO
 
          IF ( diag_level >= 2 ) &
            _DIAG_VAR_S_ (data%id_sedflux(pst_i)) = diss_flux * secs_per_day
 
          IF ( diag_level >= 2 ) &
-           _DIAG_VAR_S_ (data%id_resus(pst_i)) = zero_ * secs_per_day
+          _DIAG_VAR_S_ (data%id_tot_s(pst_i)) = PSTtot
+
       ENDDO
    ELSE
-      ! No sediment pool is resolved, but we will still predict generic diss flux
+      ! No sediment pool is resolved, but still predict a generic diss flux
       DO pst_i=1,data%num_pesticides
         diss_flux = data%pesticides(pst_i)%Fsed_pst
 
         ! Flux from the sediment
-        _FLUX_VAR_B_(data%id_pstd(pst_i)) = _FLUX_VAR_B_(data%id_pstd(pst_i)) + diss_flux
+        _FLUX_VAR_(data%id_pstd(pst_i)) = _FLUX_VAR_(data%id_pstd(pst_i)) + diss_flux
+
+        ! Resuspension flux
+        resus_flux = zero_
+        IF( data%resuspension > 0 ) THEN
+          resus_flux = _DIAG_VAR_S_(data%id_l_resus) * data%pesticides(pst_i)%pst_initial_sed    ! g/m2/s * gPST/gSed
+          DO ss_i=1,data%pesticides(pst_i)%num_sorb
+            _FLUX_VAR_(data%id_psta(pst_i,ss_i)) = _FLUX_VAR_(data%id_psta(pst_i,ss_i)) &
+                                    + resus_flux/data%pesticides(pst_i)%num_sorb
+          ENDDO
+          IF ( diag_level >= 2 ) &
+            _DIAG_VAR_S_ (data%id_resus(pst_i)) = resus_flux * secs_per_day
+        ENDIF
 
         IF ( diag_level >= 2 ) &
           _DIAG_VAR_S_ (data%id_sedflux(pst_i)) = diss_flux * secs_per_day
 
-        IF ( diag_level >= 2 ) &
-          _DIAG_VAR_S_ (data%id_resus(pst_i)) = zero_ * secs_per_day
       ENDDO
    ENDIF
 END SUBROUTINE aed_calculate_benthic_pesticides
@@ -757,9 +912,9 @@ SUBROUTINE aed_equilibrate_pesticides(data,column,layer_idx)
      pest_d = pesticide_sorption(temp,sorbents,pest_t,pest_s,Kpstp,data%pesticides(pst_i)%sorption_model)
 
      ! Update core data arrays
-     _STATE_VAR_(data%id_pstd(pst_i))    = pest_d              ! Dissolved
+     _STATE_VAR_(data%id_pstd(pst_i))= pest_d ! Dissolved
      DO sorp_i=1,data%pesticides(pst_i)%num_sorb
-      _STATE_VAR_(data%id_psta(pst_i,sorp_i)) = pest_s(sorp_i) ! Adsorped to particle group
+      _STATE_VAR_(data%id_psta(pst_i,sorp_i)) = pest_s(sorp_i) ! Adsorped to particle group i
      ENDDO
 
      ! Update diagnostic
@@ -800,6 +955,7 @@ SUBROUTINE aed_mobility_pesticides(data,column,layer_idx,mobility)
        sorbent_vvel(sorp_i) = _DIAG_VAR_(data%pesticides(pst_i)%id_sorbv(sorp_i)) / secs_per_day
        mobility(data%id_psta(pst_i,sorp_i)) = sorbent_vvel(sorp_i)
 
+       ! Record the cumulative sedimentation flux from each cell (units/m2/d)
        IF ( diag_level >= 2 ) THEN
          _DIAG_VAR_(data%id_settling(pst_i)) = _DIAG_VAR_(data%id_settling(pst_i)) &
             + _STATE_VAR_(data%id_psta(pst_i,sorp_i)) * sorbent_vvel(sorp_i)  * secs_per_day

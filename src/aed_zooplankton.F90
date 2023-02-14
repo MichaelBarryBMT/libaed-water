@@ -104,25 +104,27 @@ CONTAINS
 
 
 !###############################################################################
-INTEGER FUNCTION load_csv(dbase, zoop_param)
+INTEGER FUNCTION load_csv(dbase, zoop_param, dbsize)
 !-------------------------------------------------------------------------------
    USE aed_csv_reader
 !-------------------------------------------------------------------------------
 !ARGUMENTS
    CHARACTER(len=*),INTENT(in) :: dbase
    TYPE(zoop_param_t),INTENT(out) :: zoop_param(MAX_ZOOP_TYPES)
+   INTEGER,INTENT(out) :: dbsize
 !
 !LOCALS
    INTEGER :: unit, nccols, ccol, dcol
    CHARACTER(len=32),POINTER,DIMENSION(:) :: csvnames
    CHARACTER(len=32) :: name
    TYPE(AED_SYMBOL),DIMENSION(:),ALLOCATABLE :: values
-   INTEGER :: idx_col = 0
+   INTEGER :: idx_col = 0, idx_pry = 0
    LOGICAL :: meh
    INTEGER :: ret = 0
 !
 !BEGIN
 !-------------------------------------------------------------------------------
+   dbsize = 0
    unit = aed_csv_read_header(dbase, csvnames, nccols)
    IF (unit <= 0) THEN
       load_csv = -1
@@ -163,14 +165,19 @@ INTEGER FUNCTION load_csv(dbase, zoop_param)
             CASE ('Cmin_grz_zoo')      ; zoop_param(dcol)%Cmin_grz_zoo   = extract_double(values(ccol))
             CASE ('num_prey')          ; zoop_param(dcol)%num_prey       = extract_integer(values(ccol))
 
-            CASE ('prey(1)%zoop_prey') ; CALL copy_name(values(ccol), zoop_param(dcol)%prey(1)%zoop_prey)
-            CASE ('prey(1)%Pzoo_prey') ; zoop_param(dcol)%prey(1)%Pzoo_prey = extract_double(values(ccol))
-            CASE ('prey(2)%zoop_prey') ; CALL copy_name(values(ccol), zoop_param(dcol)%prey(3)%zoop_prey)
-            CASE ('prey(2)%Pzoo_prey') ; zoop_param(dcol)%prey(2)%Pzoo_prey = extract_double(values(ccol))
-            CASE ('prey(3)%zoop_prey') ; CALL copy_name(values(ccol), zoop_param(dcol)%prey(3)%zoop_prey)
-            CASE ('prey(3)%Pzoo_prey') ; zoop_param(dcol)%prey(3)%Pzoo_prey = extract_double(values(ccol))
+            CASE DEFAULT
+                 idx_pry = indexed_field('prey(', ')%zoop_prey', MAX_ZOOP_PREY, name)
+                 IF ( idx_pry > 0 ) THEN
+                       CALL copy_name(values(ccol), zoop_param(dcol)%prey(idx_pry)%zoop_prey)
+                 ELSE
+                    idx_pry = indexed_field('prey(', ')%Pzoo_prey', MAX_ZOOP_PREY, name)
+                    IF ( idx_pry > 0 ) THEN
+                       zoop_param(dcol)%prey(idx_pry)%Pzoo_prey = extract_double(values(ccol))
+                    ELSE
+                       print *, 'Unknown row "', TRIM(name), '"'
+                    ENDIF
+                 ENDIF
 
-            CASE DEFAULT ; ! BMT print *, 'Unknown row "', TRIM(name), '"'
          END SELECT
       ENDDO
    ENDDO
@@ -181,6 +188,7 @@ INTEGER FUNCTION load_csv(dbase, zoop_param)
    IF (ASSOCIATED(csvnames)) DEALLOCATE(csvnames)
    IF (ALLOCATED(values))    DEALLOCATE(values)
 
+   dbsize = nccols-1
    load_csv = ret
 END FUNCTION load_csv
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -192,22 +200,23 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
 !ARGUMENTS
    CLASS (aed_zooplankton_data_t),INTENT(inout) :: data
    CHARACTER(len=*),INTENT(in) :: dbase
-   INTEGER,INTENT(in)          :: count !Number of zooplankton groups
+   INTEGER,INTENT(inout)       :: count !Number of zooplankton groups
    INTEGER,INTENT(in)          :: list(*) !List of zooplankton groups to simulate
 !
 !LOCALS
-   INTEGER  :: status
+   INTEGER  :: status, dbsize
 
    INTEGER  :: i,j,tfil,sort_i(MAX_ZOOP_PREY)
    AED_REAL :: Pzoo_prey(MAX_ZOOP_PREY)
 
-   TYPE(zoop_param_t)  :: zoop_param(MAX_ZOOP_TYPES)
+   TYPE(zoop_param_t),ALLOCATABLE :: zoop_param(:)
    NAMELIST /zoop_params/ zoop_param         ! %% zoop_param_t - see aed_zoop_utils
 !-------------------------------------------------------------------------------
 !BEGIN
+    ALLOCATE(zoop_param(MAX_ZOOP_TYPES))
     SELECT CASE (param_file_type(dbase))
        CASE (CSV_TYPE)
-           status = load_csv(dbase, zoop_param)
+           status = load_csv(dbase, zoop_param, dbsize)
        CASE (NML_TYPE)
            ! BMT print*,"nml format parameter file is deprecated. Please update to CSV format"
            tfil = find_free_lun()
@@ -215,15 +224,21 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
            IF (status /= 0) STOP ! BMT 'Error opening zoop_params namelist file'
            read(tfil,nml=zoop_params,iostat=status)
            close(tfil)
+           dbsize = 0
+           DO i=1,MAX_ZOOP_TYPES
+              IF (zoop_param(i)%zoop_name == '') EXIT
+              dbsize = dbsize + 1
+           ENDDO
        CASE DEFAULT
-           ! BMT print *,'Unknown file type "',TRIM(dbase),'"';
-            status=1
+           ! BMT print *,'Unknown file type "',TRIM(dbase),'"'; status=1
     END SELECT
     IF (status /= 0) STOP ! BMT 'Error reading namelist zoop_params'
 
-    data%num_zoops = count
+    data%num_zoops = 0
     allocate(data%zoops(count))
     DO i=1,count
+       IF ( list(i) < 1 .OR. list(i) > dbsize ) EXIT  !# bad index, exit the loop
+       data%num_zoops = data%num_zoops + 1
        ! Assign parameters from database to simulated groups
        data%zoops(i)%zoop_name         = zoop_param(list(i))%zoop_name
        data%zoops(i)%zoop_initial      = zoop_param(list(i))%zoop_initial
@@ -271,6 +286,7 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
                               minimum=zoop_param(list(i))%min_zoo)
     ENDDO
 !
+    DEALLOCATE(zoop_param)
 END SUBROUTINE aed_zooplankton_load_params
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
