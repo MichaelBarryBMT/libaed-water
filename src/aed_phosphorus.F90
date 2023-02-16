@@ -267,8 +267,8 @@ SUBROUTINE aed_define_phosphorus(data, namlst)
                                            'adsobed PO4 sedimentation flux')
      data%id_frpads_res = aed_define_sheet_diag_variable('frp_ads_res','mmol P/m2/d',&
                                            'adsobed PO4 resuspension flux')
-     data%id_frpads_swi = aed_define_sheet_diag_variable('frp_ads_swi','mmol P/m2/d',&
-                                           'adsobed PO4 net flux at the swi')
+     ! BMT data%id_frpads_swi = aed_define_sheet_diag_variable('frp_ads_swi','mmol P/m2/d',&
+     !                                       'adsobed PO4 net flux at the swi')
      data%id_frp_srp = aed_define_diag_variable('frp_srp','mmol P/m3/d',       &
                                            'PO4 adsorption rate')
 
@@ -504,7 +504,7 @@ SUBROUTINE aed_calculate_benthic_phosphorus(data,column,layer_idx)
        Fsed_pip = _DIAG_VAR_S_(data%id_l_resus) * sedpipfr * 1e3/30.91   ! g/m2/s * gP/gSed * mmol/mol / g/mol = mmol/m2/s
        _DIAG_VAR_S_(data%id_frpads_res) = Fsed_pip
      ENDIF
-     _DIAG_VAR_S_(data%id_frpads_swi) = _DIAG_VAR_(data%id_frpads_set)*dz + Fsed_pip*secs_per_day
+     ! BMT _DIAG_VAR_S_(data%id_frpads_swi) = _DIAG_VAR_(data%id_frpads_set)*dz + Fsed_pip*secs_per_day
    ENDIF
 
 

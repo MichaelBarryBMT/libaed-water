@@ -729,8 +729,8 @@ SUBROUTINE aed_define_phytoplankton(data, namlst)
    data%id_Psed_phy = aed_define_diag_variable('set','mmol C/m3/d','phytoplankton sedimentation')
 
    IF ( diag_level >= 10 ) data%id_dPAR = aed_define_diag_variable('par'  ,'W/m2'   ,'photosynthetically active radiation')
-  !IF ( diag_level >= 10 ) data%id_PPR  = aed_define_diag_variable('ppr'  ,'-'      ,'phytoplankton p/r ratio (gross)')
-  !IF ( diag_level >= 10 ) data%id_NPR  = aed_define_diag_variable('npr'  ,'-'      ,'phytoplankton p/r ratio (net)')
+   IF ( diag_level >= 10 ) data%id_PPR  = aed_define_diag_variable('ppr'  ,'-'      ,'phytoplankton p/r ratio (gross)') ! BMT include to future proof
+   IF ( diag_level >= 10 ) data%id_NPR  = aed_define_diag_variable('npr'  ,'-'      ,'phytoplankton p/r ratio (net)') ! BMT include to future proof
 
    !-- Register benthic phytoplankton / mpb diagnostic variables
    IF(do_mpb>0) THEN
@@ -748,9 +748,10 @@ SUBROUTINE aed_define_phytoplankton(data, namlst)
         data%resuspension = 0.
      ENDIF
    ENDIF
-   data%id_swi_c = aed_define_sheet_diag_variable('phy_swi_c','mmol C/m2/d','mpb vertical exchange')
-   data%id_swi_n = aed_define_sheet_diag_variable('phy_swi_n','mmol N/m2/d','mpb vertical exchange')
-   data%id_swi_p = aed_define_sheet_diag_variable('phy_swi_p','mmol P/m2/d','mpb vertical exchange')
+   ! BMT remove as these are double up when MBP is not used
+   ! BMT data%id_swi_c = aed_define_sheet_diag_variable('phy_swi_c','mmol C/m2/d','mpb vertical exchange')
+   ! BMT data%id_swi_n = aed_define_sheet_diag_variable('phy_swi_n','mmol N/m2/d','mpb vertical exchange')
+   ! BMT data%id_swi_p = aed_define_sheet_diag_variable('phy_swi_p','mmol P/m2/d','mpb vertical exchange')
 
 
    !-- Register environmental dependencies
@@ -1446,9 +1447,9 @@ SUBROUTINE aed_calculate_benthic_phytoplankton(data,column,layer_idx)
    !---------------------------------------------------------------------------+
    ! No MPB community present, so the all settled material goes to burial
    ELSE
-     _DIAG_VAR_S_(data%id_swi_c) =  Psed_phy_c
-     _DIAG_VAR_S_(data%id_swi_n) =  Psed_phy_n
-     _DIAG_VAR_S_(data%id_swi_p) =  Psed_phy_p
+     ! BMT _DIAG_VAR_S_(data%id_swi_c) =  Psed_phy_c
+     ! BMT _DIAG_VAR_S_(data%id_swi_n) =  Psed_phy_n
+     ! BMT _DIAG_VAR_S_(data%id_swi_p) =  Psed_phy_p
    ENDIF
 
 END SUBROUTINE aed_calculate_benthic_phytoplankton
