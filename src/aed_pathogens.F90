@@ -100,10 +100,10 @@ MODULE aed_pathogens
       INTEGER,ALLOCATABLE :: id_ss(:)                      ! Column ID of ss if chosen
 
       ! Diagnostic IDs for processes
-      INTEGER,ALLOCATABLE :: id_growth(:), id_mortality(:), id_sunlight(:), id_grazing(:), id_total(:)
+      INTEGER,ALLOCATABLE :: id_growth(:), id_mortality(:), id_sunlight(:), id_grazing(:), id_total(:), id_pth_f_sed(:)
 
       INTEGER  :: id_oxy, id_pH,  id_doc, id_tss           ! Dependency ID
-      INTEGER  :: id_tem, id_sal                           ! Environmental IDs (3D)
+      INTEGER  :: id_tem, id_sal, id_dz                    ! Environmental IDs (3D)
       INTEGER  :: id_par, id_nir, id_uva, id_uvb           ! Environmental IDs (3D)
       INTEGER  :: id_I_0                                   ! Environmental ID (2D)
       INTEGER  :: resuspension
@@ -253,6 +253,7 @@ SUBROUTINE aed_define_pathogens(data, namlst)
    data%id_uva = aed_locate_global('uva')
    data%id_uvb = aed_locate_global('uvb')
    data%id_I_0 = aed_locate_sheet_global('par_sf')
+   data%id_dz  = aed_locate_global('layer_ht')
    IF ( resuspension > 0 ) &
       data%id_taub = aed_locate_sheet_global('taub')
 
@@ -403,6 +404,7 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
        ALLOCATE(data%id_growth(count))
        ALLOCATE(data%id_sunlight(count))
        ALLOCATE(data%id_mortality(count))
+       ALLOCATE(data%id_pth_f_sed(count))
     ENDIF
 
     DO i=1,count
@@ -456,6 +458,7 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
           data%id_growth(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_g', 'orgs/m3/day', 'growth')
           data%id_sunlight(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_l', 'orgs/m3/day', 'sunlight')
           data%id_mortality(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_m', 'orgs/m3/day', 'mortality')
+          data%id_pth_f_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_f_set', 'orgs/m3/d', 'sedimentation') !PRequest
        ENDIF
    ENDDO
    DEALLOCATE(pd)
@@ -526,6 +529,7 @@ SUBROUTINE aed_calculate_pathogens(data,column,layer_idx)
       IF (data%pathogens(pth_i)%coef_sett_fa > zero_) THEN
         pth_a = _STATE_VAR_(data%id_pa(pth_i))
       END IF
+      pth_d = _STATE_VAR_(data%id_pd(pth_i)) ! BMT pull request
 
       growth    = zero_
       predation = zero_
@@ -617,11 +621,11 @@ SUBROUTINE aed_calculate_pathogens(data,column,layer_idx)
 
       !-----------------------------------------------------------------
       ! SET DIAGNOSTICS
-      _DIAG_VAR_(data%id_total(pth_i)) =  pth_f + pth_a + pth_d                ! orgs/m3/s
+      _DIAG_VAR_(data%id_total(pth_i)) =  pth_f + pth_a + pth_d                                 ! orgs/m3
       IF ( diag_level >= 10 ) THEN
-         _DIAG_VAR_(data%id_growth(pth_i)) =  growth*(pth_f + pth_a)           ! orgs/m3/s
-         _DIAG_VAR_(data%id_sunlight(pth_i)) =  light*pth_f + (light/2.)*pth_a ! orgs/m3/s
-         _DIAG_VAR_(data%id_mortality(pth_i)) =  mortality*(pth_f + pth_a)     ! orgs/m3/s
+         _DIAG_VAR_(data%id_growth(pth_i)) =  growth*(pth_f + pth_a) * secs_per_day             ! orgs/m3/d
+         _DIAG_VAR_(data%id_sunlight(pth_i)) =  (light*pth_f + (light/2.)*pth_a) * secs_per_day ! orgs/m3/d
+         _DIAG_VAR_(data%id_mortality(pth_i)) =  mortality*(pth_f + pth_a) * secs_per_day       ! orgs/m3/d
       ENDIF
    ENDDO
 END SUBROUTINE aed_calculate_pathogens
@@ -759,18 +763,25 @@ SUBROUTINE aed_mobility_pathogens(data,column,layer_idx,mobility)
    TYPE (aed_column_t),INTENT(inout) :: column(:)
    INTEGER,INTENT(in) :: layer_idx
    AED_REAL,INTENT(inout) :: mobility(:)
+   
 !
 !LOCALS
-   AED_REAL :: temp, vel
+   AED_REAL :: temp, vel, dz
    INTEGER  :: ss_i,pth_i
 !
 !-------------------------------------------------------------------------------
 !BEGIN
    temp = _STATE_VAR_(data%id_tem)
+   dz = _STATE_VAR_(data%id_dz)
+
+   _DIAG_VAR_(data%id_pth_f_sed) = zero_
 
    ! First set velocity for free pathogen groups
    DO pth_i=1,data%num_pathogens
       mobility(data%id_pf(pth_i)) =  data%pathogens(pth_i)%coef_sett_w_path
+      IF ( diag_level >= 10 ) THEN
+         _DIAG_VAR_(data%id_pth_f_sed(pth_i)) = (mobility(data%id_pf(pth_i))/dz) * _STATE_VAR_(data%id_pf(pth_i)) * secs_per_day        ! orgs/m3/d   !PRequest
+      END IF
    ENDDO
 
    ! Compute settling rate of particles
@@ -786,6 +797,7 @@ SUBROUTINE aed_mobility_pathogens(data,column,layer_idx,mobility)
          mobility(data%id_pa(pth_i)) =  data%ss_set(1)
       ENDIF
    ENDDO
+   
 END SUBROUTINE aed_mobility_pathogens
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
