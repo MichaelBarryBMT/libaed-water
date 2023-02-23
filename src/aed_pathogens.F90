@@ -100,7 +100,8 @@ MODULE aed_pathogens
       INTEGER,ALLOCATABLE :: id_ss(:)                      ! Column ID of ss if chosen
 
       ! Diagnostic IDs for processes
-      INTEGER,ALLOCATABLE :: id_growth(:), id_mortality(:), id_sunlight(:), id_grazing(:), id_total(:), id_pth_f_sed(:)
+      INTEGER,ALLOCATABLE :: id_growth(:), id_mortality(:), id_sunlight(:), id_grazing(:), id_total(:)
+      INTEGER,ALLOCATABLE :: id_pth_f_sed(:), id_pth_d_sed(:) 
 
       INTEGER  :: id_oxy, id_pH,  id_doc, id_tss           ! Dependency ID
       INTEGER  :: id_tem, id_sal, id_dz                    ! Environmental IDs (3D)
@@ -405,6 +406,7 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
        ALLOCATE(data%id_sunlight(count))
        ALLOCATE(data%id_mortality(count))
        ALLOCATE(data%id_pth_f_sed(count))
+       ALLOCATE(data%id_pth_d_sed(count))
     ENDIF
 
     DO i=1,count
@@ -458,7 +460,8 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
           data%id_growth(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_g', 'orgs/m3/day', 'growth')
           data%id_sunlight(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_l', 'orgs/m3/day', 'sunlight')
           data%id_mortality(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_m', 'orgs/m3/day', 'mortality')
-          data%id_pth_f_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_f_set', 'orgs/m3/d', 'sedimentation') !PRequest
+          data%id_pth_f_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_f_set', 'orgs/m3/d', 'alive sedimentation') !PRequest
+          data%id_pth_d_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_d_set', 'orgs/m3/d', 'dead sedimentation') !PRequest
        ENDIF
    ENDDO
    DEALLOCATE(pd)
@@ -775,12 +778,14 @@ SUBROUTINE aed_mobility_pathogens(data,column,layer_idx,mobility)
    dz = _STATE_VAR_(data%id_dz)
 
    _DIAG_VAR_(data%id_pth_f_sed) = zero_
+   _DIAG_VAR_(data%id_pth_d_sed) = zero_
 
    ! First set velocity for free pathogen groups
    DO pth_i=1,data%num_pathogens
       mobility(data%id_pf(pth_i)) =  data%pathogens(pth_i)%coef_sett_w_path
       IF ( diag_level >= 10 ) THEN
          _DIAG_VAR_(data%id_pth_f_sed(pth_i)) = (mobility(data%id_pf(pth_i))/dz) * _STATE_VAR_(data%id_pf(pth_i)) * secs_per_day        ! orgs/m3/d   !PRequest
+         _DIAG_VAR_(data%id_pth_d_sed(pth_i)) = (mobility(data%id_pd(pth_i))/dz) * _STATE_VAR_(data%id_pd(pth_i)) * secs_per_day        ! orgs/m3/d   !PRequest
       END IF
    ENDDO
 
