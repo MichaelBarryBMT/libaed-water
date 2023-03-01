@@ -101,7 +101,7 @@ MODULE aed_pathogens
 
       ! Diagnostic IDs for processes
       INTEGER,ALLOCATABLE :: id_growth(:), id_mortality(:), id_sunlight(:), id_grazing(:), id_total(:)
-      INTEGER,ALLOCATABLE :: id_pth_f_sed(:), id_pth_d_sed(:) 
+      INTEGER,ALLOCATABLE :: id_pth_f_sed(:), id_pth_d_sed(:), id_pth_a_sed(:), id_attachment(:)
 
       INTEGER  :: id_oxy, id_pH,  id_doc, id_tss           ! Dependency ID
       INTEGER  :: id_tem, id_sal, id_dz                    ! Environmental IDs (3D)
@@ -230,13 +230,13 @@ SUBROUTINE aed_define_pathogens(data, namlst)
       ALLOCATE(data%epsilon(num_ss)); data%epsilon(1:num_ss) = epsilon(1:num_ss)
       ALLOCATE(data%tau_0(num_ss))  ; data%tau_0(1:num_ss)   = tau_0(1:num_ss)
 
-      trac_name = 'ss0'
-      ! Register state variables
-      DO i=1,num_ss
-         trac_name(3:3) = CHAR(ICHAR('0') + i)
-         data%id_ss(i) = aed_define_variable(TRIM(trac_name),'g/m**3','path ss', &
-                                                  ss_initial,minimum=zero_)
-      ENDDO
+      ! BMT trac_name = 'ss0'
+      ! BMT ! Register state variables
+      ! BMT DO i=1,num_ss
+      ! BMT    trac_name(3:3) = CHAR(ICHAR('0') + i)
+      ! BMT    data%id_ss(i) = aed_define_variable(TRIM(trac_name),'g/m**3','path ss', &
+      ! BMT                                             ss_initial,minimum=zero_)
+      ! BMT ENDDO
    ENDIF
    IF ( resuspension == 2 ) THEN
       data%id_epsilon =  aed_define_sheet_diag_variable('epsilon','g/m**2/s', 'Resuspension rate')
@@ -407,6 +407,8 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
        ALLOCATE(data%id_mortality(count))
        ALLOCATE(data%id_pth_f_sed(count))
        ALLOCATE(data%id_pth_d_sed(count))
+       ALLOCATE(data%id_pth_a_sed(count))
+       ALLOCATE(data%id_attachment(count))
     ENDIF
 
     DO i=1,count
@@ -460,8 +462,12 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
           data%id_growth(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_g', 'orgs/m3/day', 'growth')
           data%id_sunlight(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_l', 'orgs/m3/day', 'sunlight')
           data%id_mortality(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_m', 'orgs/m3/day', 'mortality')
-          data%id_pth_f_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_f_set', 'orgs/m3/d', 'alive sedimentation') !PRequest
-          data%id_pth_d_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_d_set', 'orgs/m3/d', 'dead sedimentation') !PRequest
+          data%id_pth_f_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_f_set', 'orgs/m3/d', 'alive sedimentation')
+          data%id_pth_d_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_d_set', 'orgs/m3/d', 'dead sedimentation')
+          IF (data%pathogens(i)%coef_sett_fa > zero_) THEN
+             data%id_pth_a_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_a_set', 'orgs/m3/d', 'attached sedimentation') 
+             data%id_attachment(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_att', 'orgs/m3/d', 'attachment rate') 
+          END IF
        ENDIF
    ENDDO
    DEALLOCATE(pd)
@@ -531,6 +537,8 @@ SUBROUTINE aed_calculate_pathogens(data,column,layer_idx)
       pth_f = _STATE_VAR_(data%id_pf(pth_i))
       IF (data%pathogens(pth_i)%coef_sett_fa > zero_) THEN
         pth_a = _STATE_VAR_(data%id_pa(pth_i))
+      ELSE
+        pth_a = 0.0
       END IF
       pth_d = _STATE_VAR_(data%id_pd(pth_i)) ! BMT pull request
 
@@ -586,21 +594,33 @@ SUBROUTINE aed_calculate_pathogens(data,column,layer_idx)
 
 
       !-- Attachment of free orgs to particles (as impacted by SS and desired attachment ratio)
+      ! 24/02/2023
+      ! The previous formulation used _FLUX_VAR_as a test, but this is zero if resus_flux is zero
+      ! (which is common and will apply to cells away from the bed anyway)
+      ! This meant that attachment was also being set to zero in these cells
+      ! The formulation below uses existing conditions and stores to work out
+      ! attachment and detachment kinetics, assuming unlimited sediment.
+      ! For a proper balance on the availability to meet attachment, the test should be
+      ! attachment > pth_f/dt and 
+      ! attachment > pth_a/dt 
+      ! which is a comparison of two orgs/m3/s rates
+      ! but dt cannot be seen in this modulle so as a stop gap I used a typical 
+      ! dt of 15 minutes. This should be fixed by a coder who knows what they are doing!
+      
       attachment = zero_
       IF (data%pathogens(pth_i)%coef_sett_fa > zero_ .AND. (pth_f+pth_a) > 1e-2) THEN
-         ! First check if ratio at last time step is less than desired (ie coef_sett_fa)
+         ! Compute ratio at last time step for compariosn with coef_sett_fa
          att_frac = pth_a/(pth_a+pth_f)
-         IF (att_frac<data%pathogens(pth_i)%coef_sett_fa) THEN
-            ! Assume rate of attachment is slow based on att_ts (orgs/m3/s)
-            ! Small fraction, so the "attachment deficit" is redistributed each time step
-            attachment = data%att_ts * (data%pathogens(pth_i)%coef_sett_fa*pth_a - pth_f)
-            IF(attachment>zero_ .AND. attachment > _FLUX_VAR_(data%id_pf(pth_i)))THEN
-              ! proposed attachment is more than is available.
-              attachment = 0.5 * _FLUX_VAR_(data%id_pf(pth_i))
-            ELSEIF(attachment<zero_ .AND. attachment > _FLUX_VAR_(data%id_pa(pth_i)))THEN
-              ! proposed de-attachment is more than is available.
-              attachment = 0.5 * _FLUX_VAR_(data%id_pa(pth_i))
-            ENDIF
+         ! Compute attachment defecit/credit
+         ! This was: attachment = data%att_ts * (data%pathogens(pth_i)%coef_sett_fa*pth_a - pth_f)
+         attachment = data%att_ts * (data%pathogens(pth_i)%coef_sett_fa*(pth_a + pth_f) - pth_a)
+         ! Compare current frac with available pools
+         ! Not enough pth_f to meet attachment need
+         IF ((att_frac<data%pathogens(pth_i)%coef_sett_fa).AND.(attachment > pth_f/900.0)) THEN 
+            attachment = 0.5 * pth_f/900.0 
+         ! Not enough pth_a to meet detachment need
+         ELSEIF ((att_frac>data%pathogens(pth_i)%coef_sett_fa).AND.(abs(attachment) > pth_a/900.0)) THEN
+            attachment = 0.5 * pth_a/900.0 
          ENDIF
       ENDIF
 
@@ -629,6 +649,10 @@ SUBROUTINE aed_calculate_pathogens(data,column,layer_idx)
          _DIAG_VAR_(data%id_growth(pth_i)) =  growth*(pth_f + pth_a) * secs_per_day             ! orgs/m3/d
          _DIAG_VAR_(data%id_sunlight(pth_i)) =  (light*pth_f + (light/2.)*pth_a) * secs_per_day ! orgs/m3/d
          _DIAG_VAR_(data%id_mortality(pth_i)) =  mortality*(pth_f + pth_a) * secs_per_day       ! orgs/m3/d
+         ! Attached
+         IF (data%pathogens(pth_i)%coef_sett_fa > zero_) THEN
+            _DIAG_VAR_(data%id_attachment(pth_i)) =  attachment * secs_per_day                  ! orgs/m3/d
+         END IF
       ENDIF
    ENDDO
 END SUBROUTINE aed_calculate_pathogens
@@ -784,8 +808,8 @@ SUBROUTINE aed_mobility_pathogens(data,column,layer_idx,mobility)
    DO pth_i=1,data%num_pathogens
       mobility(data%id_pf(pth_i)) =  data%pathogens(pth_i)%coef_sett_w_path
       IF ( diag_level >= 10 ) THEN
-         _DIAG_VAR_(data%id_pth_f_sed(pth_i)) = (mobility(data%id_pf(pth_i))/dz) * _STATE_VAR_(data%id_pf(pth_i)) * secs_per_day        ! orgs/m3/d   !PRequest
-         _DIAG_VAR_(data%id_pth_d_sed(pth_i)) = (mobility(data%id_pd(pth_i))/dz) * _STATE_VAR_(data%id_pd(pth_i)) * secs_per_day        ! orgs/m3/d   !PRequest
+         _DIAG_VAR_(data%id_pth_f_sed(pth_i)) = (mobility(data%id_pf(pth_i))/dz) * _STATE_VAR_(data%id_pf(pth_i)) * secs_per_day        ! orgs/m3/d
+         _DIAG_VAR_(data%id_pth_d_sed(pth_i)) = (mobility(data%id_pd(pth_i))/dz) * _STATE_VAR_(data%id_pd(pth_i)) * secs_per_day        ! orgs/m3/d
       END IF
    ENDDO
 
@@ -799,7 +823,8 @@ SUBROUTINE aed_mobility_pathogens(data,column,layer_idx,mobility)
    !##NB Currently attached all assume on SS1
    DO pth_i=1,data%num_pathogens
       IF (data%pathogens(pth_i)%coef_sett_fa>zero_)  THEN
-         mobility(data%id_pa(pth_i)) =  data%ss_set(1)
+         mobility(data%id_pa(pth_i)) =  data%ss_set(pth_i)
+         _DIAG_VAR_(data%id_pth_a_sed(pth_i)) = (mobility(data%id_pa(pth_i))/dz) * _STATE_VAR_(data%id_pa(pth_i)) * secs_per_day        ! orgs/m3/d
       ENDIF
    ENDDO
    
