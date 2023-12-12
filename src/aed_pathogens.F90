@@ -8,7 +8,7 @@
 !#                                                                             #
 !#      http://aquatic.science.uwa.edu.au/                                     #
 !#                                                                             #
-!#  Copyright 2017 - 2022 -  The University of Western Australia               #
+!#  Copyright 2017 - 2023 -  The University of Western Australia               #
 !#                                                                             #
 !#   AED is free software: you can redistribute it and/or modify               #
 !#   it under the terms of the GNU General Public License as published by      #
@@ -381,9 +381,8 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
            status = load_csv(dbase, pd)
        CASE (NML_TYPE)
            ! BMT print*,"nml format parameter file is deprecated. Please update to CSV format"
-           tfil = find_free_lun()
-           open(tfil,file=dbase, status='OLD',iostat=status)
-           IF (status /= 0) STOP ! BMT 'Error opening namelist pathogen_data'
+           open(NEWUNIT=tfil,file=dbase, status='OLD',iostat=status)
+           IF (status /= 0) STOP  ! BMT 'Error opening namelist pathogen_data'
            read(tfil,nml=pathogen_data,iostat=status)
            close(tfil)
        CASE DEFAULT
@@ -462,11 +461,15 @@ SUBROUTINE aed_pathogens_load_params(data, dbase, count, list)
           data%id_growth(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_g', 'orgs/m3/day', 'growth')
           data%id_sunlight(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_l', 'orgs/m3/day', 'sunlight')
           data%id_mortality(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_m', 'orgs/m3/day', 'mortality')
-          data%id_pth_f_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_f_set', 'orgs/m3/d', 'alive sedimentation')
-          data%id_pth_d_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_d_set', 'orgs/m3/d', 'dead sedimentation')
+          data%id_pth_f_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_f_set', &
+                                                                         'orgs/m3/d', 'alive sedimentation')
+          data%id_pth_d_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_d_set', &
+                                                                         'orgs/m3/d', 'dead sedimentation')
           IF (data%pathogens(i)%coef_sett_fa > zero_) THEN
-             data%id_pth_a_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_a_set', 'orgs/m3/d', 'attached sedimentation') 
-             data%id_attachment(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_att', 'orgs/m3/d', 'attachment rate') 
+             data%id_pth_a_sed(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_a_set', &
+                                                                         'orgs/m3/d', 'attached sedimentation')
+             data%id_attachment(i) = aed_define_diag_variable( TRIM(data%pathogens(i)%p_name)//'_att', &
+                                                                         'orgs/m3/d', 'attachment rate')
           END IF
        ENDIF
    ENDDO
@@ -644,7 +647,7 @@ SUBROUTINE aed_calculate_pathogens(data,column,layer_idx)
 
       !-----------------------------------------------------------------
       ! SET DIAGNOSTICS
-      _DIAG_VAR_(data%id_total(pth_i)) =  pth_f + pth_a + pth_d                                 ! orgs/m3
+      _DIAG_VAR_(data%id_total(pth_i)) =  pth_f + pth_a + pth_d                ! orgs/m3/s
       IF ( diag_level >= 10 ) THEN
          _DIAG_VAR_(data%id_growth(pth_i)) =  growth*(pth_f + pth_a) * secs_per_day             ! orgs/m3/d
          _DIAG_VAR_(data%id_sunlight(pth_i)) =  (light*pth_f + (light/2.)*pth_a) * secs_per_day ! orgs/m3/d
@@ -790,7 +793,6 @@ SUBROUTINE aed_mobility_pathogens(data,column,layer_idx,mobility)
    TYPE (aed_column_t),INTENT(inout) :: column(:)
    INTEGER,INTENT(in) :: layer_idx
    AED_REAL,INTENT(inout) :: mobility(:)
-   
 !
 !LOCALS
    AED_REAL :: temp, vel, dz
@@ -827,7 +829,6 @@ SUBROUTINE aed_mobility_pathogens(data,column,layer_idx,mobility)
          _DIAG_VAR_(data%id_pth_a_sed(pth_i)) = (mobility(data%id_pa(pth_i))/dz) * _STATE_VAR_(data%id_pa(pth_i)) * secs_per_day        ! orgs/m3/d
       ENDIF
    ENDDO
-   
 END SUBROUTINE aed_mobility_pathogens
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

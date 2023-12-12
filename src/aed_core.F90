@@ -9,7 +9,7 @@
 !#                                                                             #
 !#      http://aquatic.science.uwa.edu.au/                                     #
 !#                                                                             #
-!#  Copyright 2013 - 2022 -  The University of Western Australia               #
+!#  Copyright 2013 - 2023 -  The University of Western Australia               #
 !#                                                                             #
 !#   AED is free software: you can redistribute it and/or modify               #
 !#   it under the terms of the GNU General Public License as published by      #
@@ -39,7 +39,8 @@ MODULE aed_core
    PRIVATE  !# Everything defaults to private
 
    PUBLIC aed_model_data_t, aed_variable_t, aed_column_t
-   PUBLIC aed_init_core, aed_get_var, aed_core_status
+   PUBLIC aed_init_core, aed_core_status
+   PUBLIC aed_get_var, aed_get_var_idx
    PUBLIC aed_set_current_model, aed_set_prefix
    PUBLIC aed_is_const_var, aed_set_const_var
 
@@ -89,6 +90,7 @@ MODULE aed_core
          procedure :: particle_bgc       => aed_particle_bgc
          procedure :: mobility           => aed_mobility
          procedure :: validate           => aed_validate
+         procedure :: inflow_update      => aed_inflow_update
          procedure :: delete             => aed_delete
       !# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    END TYPE aed_model_data_t
@@ -110,6 +112,7 @@ MODULE aed_core
       LOGICAL           :: top, bot, const
       LOGICAL           :: zavg, zavg_req
       INTEGER           :: particle_link
+      INTEGER           :: index
       CLASS(aed_prefix_list_t),POINTER :: req => null()
    END TYPE aed_variable_t
    !#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -311,8 +314,13 @@ INTEGER FUNCTION aed_core_status(n_v, n_sv, n_d, n_sd, logit)
    DO i=1,n_aed_vars
       IF ( .NOT. all_vars(i)%extern .AND. .NOT. all_vars(i)%diag ) THEN
          CALL display_var(all_vars(i), i)
-         IF ( all_vars(i)%sheet ) THEN ; n_sheet_vars = n_sheet_vars + 1
-         ELSE ; n_vars = n_vars + 1 ; ENDIF
+         IF ( all_vars(i)%sheet ) THEN
+            n_sheet_vars = n_sheet_vars + 1
+            all_vars(i)%index = n_sheet_vars
+         ELSE
+            n_vars = n_vars + 1
+            all_vars(i)%index = n_vars
+         ENDIF
       ENDIF
    ENDDO
 
@@ -322,8 +330,13 @@ INTEGER FUNCTION aed_core_status(n_v, n_sv, n_d, n_sd, logit)
    DO i=1,n_aed_vars
       IF ( .NOT. all_vars(i)%extern .AND. all_vars(i)%diag ) THEN
          CALL display_var(all_vars(i), i)
-         IF ( all_vars(i)%sheet ) THEN ; n_sheet_diags = n_sheet_diags + 1
-         ELSE ; n_diags = n_diags + 1 ; ENDIF
+         IF ( all_vars(i)%sheet ) THEN
+            n_sheet_diags = n_sheet_diags + 1
+            all_vars(i)%index = n_sheet_diags
+         ELSE
+            n_diags = n_diags + 1
+            all_vars(i)%index = n_diags
+         ENDIF
       ENDIF
    ENDDO
    ! BMT write(log, *)
@@ -403,6 +416,7 @@ SUBROUTINE extend_allocated_variables(pcount)
    all_vars(a_vars+1:a_vars+count)%diag = .false.
    all_vars(a_vars+1:a_vars+count)%extern = .false.
    all_vars(a_vars+1:a_vars+count)%found = .false.
+   all_vars(a_vars+1:a_vars+count)%index = -1
 
    all_vars(a_vars+1:a_vars+count)%top = .false.
    all_vars(a_vars+1:a_vars+count)%bot = .false.
@@ -829,6 +843,25 @@ END FUNCTION aed_get_var
 
 
 !###############################################################################
+FUNCTION aed_get_var_idx(which) RESULT(ret)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   INTEGER,INTENT(in) :: which
+!
+!LOCALS
+   INTEGER :: ret
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   ret = -1
+   IF (which > 0 .AND. which <= n_aed_vars) THEN
+      ret = all_vars(which)%index
+   ENDIF
+END FUNCTION aed_get_var_idx
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
 LOGICAL FUNCTION aed_is_const_var(which)
 !-------------------------------------------------------------------------------
 !ARGUMENTS
@@ -1078,6 +1111,18 @@ SUBROUTINE aed_particle_bgc(data,column,layer_idx,ppid,partcl)
 !-------------------------------------------------------------------------------
 !print*,"Default aed_particle_bgc ", TRIM(data%aed_model_name)
 END SUBROUTINE aed_particle_bgc
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed_inflow_update(data, wqinf, temp, salt)
+!-------------------------------------------------------------------------------
+   CLASS (aed_model_data_t),INTENT(in) :: data
+   AED_REAL,DIMENSION(:),INTENT(inout) :: wqinf
+   AED_REAL,             INTENT(inout) :: temp, salt
+!-------------------------------------------------------------------------------
+!print*,"Default aed_inflow_update ", TRIM(data%aed_model_name)
+END SUBROUTINE aed_inflow_update
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

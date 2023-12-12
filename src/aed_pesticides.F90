@@ -8,7 +8,7 @@
 !#                                                                             #
 !#      http://aquatic.science.uwa.edu.au/                                     #
 !#                                                                             #
-!#  Copyright 2022 -  The University of Western Australia                      #
+!#  Copyright 2022 - 2023 -  The University of Western Australia               #
 !#                                                                             #
 !#   AED is free software: you can redistribute it and/or modify               #
 !#   it under the terms of the GNU General Public License as published by      #
@@ -463,8 +463,10 @@ SUBROUTINE aed_pesticides_load_params(data, dbase, count, list)
        ENDIF
 
        IF (data%simSediment) THEN
-          data%id_psts(i) = aed_define_sheet_variable( TRIM(data%pesticides(i)%name)//'_sed', 'mg/m2', 'sorbed pesticides in sediment',data%pesticides(i)%pst_initial_sed*0.5 )
-          data%id_pstw(i) = aed_define_sheet_variable( TRIM(data%pesticides(i)%name)//'_pw', 'mg/m2', 'porewater pesticides in sediment',data%pesticides(i)%pst_initial_sed*0.5)
+          data%id_psts(i) = aed_define_sheet_variable( TRIM(data%pesticides(i)%name)//'_sed', 'mg/m2', &
+                                  'sorbed pesticides in sediment',data%pesticides(i)%pst_initial_sed*0.5 )
+          data%id_pstw(i) = aed_define_sheet_variable( TRIM(data%pesticides(i)%name)//'_pw', 'mg/m2', &
+                                  'porewater pesticides in sediment',data%pesticides(i)%pst_initial_sed*0.5)
        ENDIF
 
        !data%id_total(i) = aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_t', 'orgs/m3', 'total')
@@ -483,7 +485,8 @@ SUBROUTINE aed_pesticides_load_params(data, dbase, count, list)
          data%id_total(i)     = &
                 aed_define_diag_variable( TRIM(data%pesticides(i)%name)//'_tot', 'mg/m3'  , 'total pesticide concentration')
          IF (data%simSediment) data%id_tot_s(i)     = &
-                aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_tot_sed', 'mg/m2'  , 'total pesticide concentration in the sediment')
+                aed_define_sheet_diag_variable( TRIM(data%pesticides(i)%name)//'_tot_sed', 'mg/m2'  , &
+                                                                     'total pesticide concentration in the sediment')
        ENDIF
    ENDDO
    DEALLOCATE(pd)

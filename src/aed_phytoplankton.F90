@@ -8,7 +8,7 @@
 !#                                                                             #
 !#      http://aquatic.science.uwa.edu.au/                                     #
 !#                                                                             #
-!#  Copyright 2013 - 2022 -  The University of Western Australia               #
+!#  Copyright 2013 - 2023 -  The University of Western Australia               #
 !#                                                                             #
 !#   AED is free software: you can redistribute it and/or modify               #
 !#   it under the terms of the GNU General Public License as published by      #
@@ -273,8 +273,7 @@ SUBROUTINE aed_phytoplankton_load_params(data, dbase, count, list, settling, res
        CASE (NML_TYPE)
            ! BMT print*,"nml format parameter file is deprecated. Please update to CSV format"
            pd%p_name = ''
-           tfil = find_free_lun()
-           open(tfil,file=dbase, status='OLD',iostat=status)
+           open(NEWUNIT=tfil,file=dbase, status='OLD',iostat=status)
            IF (status /= 0) STOP ! BMT 'Cannot open phyto_data namelist file'
            read(tfil,nml=phyto_data,iostat=status)
            close(tfil)
@@ -1343,7 +1342,7 @@ SUBROUTINE aed_calculate_benthic_phytoplankton(data,column,layer_idx)
          fI = zero_
          mpb_prod = zero_
          mpb_resp = zero_
-         mpb_burial = Psed_phy_c/secs_per_day ! all deposited material is buried
+         mpb_burial = -Psed_phy_c/secs_per_day ! set all deposited material to be buried (noting that Psed is -ve downawards)
        ENDIF
      ENDIF
      mpb_flux = (mpb_prod-mpb_resp)*mpb
