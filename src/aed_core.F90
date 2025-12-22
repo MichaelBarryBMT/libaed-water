@@ -108,6 +108,10 @@ MODULE aed_core
       AED_REAL          :: maximum
       AED_REAL          :: mobility
       AED_REAL          :: light_extinction
+      AED_REAL          :: supplementary1
+      AED_REAL          :: supplementary2
+      AED_REAL          :: supplementary3
+      INTEGER           :: supplementary4
       LOGICAL           :: sheet, diag, extern, found
       LOGICAL           :: top, bot, const
       LOGICAL           :: zavg, zavg_req
@@ -544,12 +548,15 @@ END FUNCTION aed_create_variable
 !# These define names and defaults for variables, returning their index:
 
 !###############################################################################
-FUNCTION aed_define_variable(name, units, longname, initial, minimum, maximum, mobility) RESULT(ret)
+FUNCTION aed_define_variable(name, units, longname, initial, minimum, maximum, mobility, &
+                             & supplementary1, supplementary2, supplementary3, supplementary4) RESULT(ret)
 !-------------------------------------------------------------------------------
 !ARGUMENTS
    CHARACTER(*),INTENT(in) :: name, longname, units
    AED_REAL,INTENT(in),OPTIONAL :: initial, minimum, maximum
    AED_REAL,INTENT(in),OPTIONAL :: mobility
+   AED_REAL,INTENT(in),OPTIONAL :: supplementary1, supplementary2, supplementary3
+   INTEGER,INTENT(in),OPTIONAL  ::  supplementary4
 !
 !LOCALS
    INTEGER :: ret
@@ -562,6 +569,10 @@ FUNCTION aed_define_variable(name, units, longname, initial, minimum, maximum, m
    if ( present(minimum) ) all_vars(ret)%minimum = minimum
    if ( present(maximum) ) all_vars(ret)%maximum = maximum
    if ( present(mobility) ) all_vars(ret)%mobility = mobility
+   if ( present(supplementary1) ) all_vars(ret)%supplementary1 = supplementary1
+   if ( present(supplementary2) ) all_vars(ret)%supplementary2 = supplementary2
+   if ( present(supplementary3) ) all_vars(ret)%supplementary3 = supplementary3
+   if ( present(supplementary4) ) all_vars(ret)%supplementary4 = supplementary4
 
 !  all_vars(ret)%sheet = .false.
 !  all_vars(ret)%diag = .false.
@@ -722,10 +733,11 @@ END FUNCTION aed_provide_sheet_global
 !# These return the index for the named variable :
 
 !###############################################################################
-FUNCTION aed_locate_variable(name) RESULT(ret)
+FUNCTION aed_locate_variable(name,parent) RESULT(ret)
 !-------------------------------------------------------------------------------
 !ARGUMENTS
    CHARACTER(*),INTENT(in) :: name
+   INTEGER,OPTIONAL,INTENT(in) :: parent
 !
 !LOCALS
    INTEGER :: ret
@@ -733,7 +745,15 @@ FUNCTION aed_locate_variable(name) RESULT(ret)
 !-------------------------------------------------------------------------------
 !BEGIN
    IF ( TRIM(name) == '' ) THEN ; ret = 0; RETURN ; ENDIF
-
+   
+   IF (PRESENT(parent)) THEN     
+       IF (( all_vars(parent)%req%aed_model_prefix.EQ.'PHY' ) .AND. & 
+          ( all_vars(parent)%supplementary4 == 0 )) THEN
+           ret = 0
+           RETURN
+       ENDIF
+   END IF
+   
    ret = aed_create_variable(name, '', '', .true.)
 
    IF ( ret /= 0 ) THEN

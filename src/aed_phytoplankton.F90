@@ -389,7 +389,11 @@ SUBROUTINE aed_phytoplankton_load_params(data, dbase, count, list, settling, res
                               pd(list(i))%p_initial,                           &
                               minimum=pd(list(i))%p0,                          &
                               maximum=1e4,                                     &
-                              mobility = data%phytos(i)%w_p)
+                              mobility = data%phytos(i)%w_p,                   &
+                              supplementary1 = pd(list(i))%X_ncon,             &
+                              supplementary2 = pd(list(i))%X_pcon,             &
+                              supplementary3 = pd(list(i))%X_sicon,            &
+                              supplementary4 = pd(list(i))%simINDynamics)
 
        ! Register rho (density) group as a state variable, if required
        IF (data%phytos(i)%settling == _MOB_STOKES_) THEN

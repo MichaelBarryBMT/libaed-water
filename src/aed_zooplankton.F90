@@ -371,10 +371,11 @@ SUBROUTINE aed_define_zooplankton(data, namlst)
           !internal nitrogen and phosphorus
           IF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
               phy_i = phy_i + 1
+              
               data%zoops(zoop_i)%id_phyIN(phy_i) = aed_locate_variable( &
-                                       TRIM(data%zoops(zoop_i)%prey(prey_i)%zoop_prey)//'_IN')
+                                       TRIM(data%zoops(zoop_i)%prey(prey_i)%zoop_prey)//'_IN', parent = data%zoops(zoop_i)%id_prey(prey_i))
               data%zoops(zoop_i)%id_phyIP(phy_i) = aed_locate_variable( &
-                                       TRIM(data%zoops(zoop_i)%prey(prey_i)%zoop_prey)//'_IP')
+                                       TRIM(data%zoops(zoop_i)%prey(prey_i)%zoop_prey)//'_IP', parent = data%zoops(zoop_i)%id_prey(prey_i))
 
           ENDIF
       ENDDO
