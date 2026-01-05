@@ -445,6 +445,8 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
    AED_REAL           :: grazing_n, grazing_p !Grazing on nutrients
    AED_REAL           :: pon_excr, pop_excr, poc_excr !POM excretion rates
    AED_REAL           :: don_excr, dop_excr, doc_excr, delta_C !DOM excretion rates
+   TYPE(aed_variable_t),POINTER :: tvar
+
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -500,7 +502,7 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
       food = grazing * zoo
       IF (Ctotal_prey < data%zoops(zoop_i)%num_prey * data%zoops(zoop_i)%Cmin_grz_zoo ) THEN
           food = zero_
-          grazing = food / zoo
+          grazing = zero_
       ELSEIF (food > Ctotal_prey - data%zoops(zoop_i)%num_prey * data%zoops(zoop_i)%Cmin_grz_zoo ) THEN
           food = Ctotal_prey - data%zoops(zoop_i)%num_prey * data%zoops(zoop_i)%Cmin_grz_zoo
           grazing = food / zoo
@@ -545,6 +547,7 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
       grazing_n = zero_
       grazing_p = zero_
       phy_i = 0
+          
       DO prey_i = 1,data%zoops(zoop_i)%num_prey
          IF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey .EQ. _OGMPOC_) THEN
             IF (poc > zero_) THEN
@@ -556,10 +559,24 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
             ENDIF
          ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
             phy_i = phy_i + 1
-            phy_INcon(phy_i) = _STATE_VAR_(data%zoops(zoop_i)%id_phyIN(phy_i))
-            phy_IPcon(phy_i) = _STATE_VAR_(data%zoops(zoop_i)%id_phyIP(phy_i))
-            grazing_n = grazing_n + grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i) /14.0
-            grazing_p = grazing_p + grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i) /31.0
+            IF (aed_get_var(data%zoops(zoop_i)%id_prey(prey_i),tvar)) THEN
+                ! Simulates internal nutrients
+                IF (tvar%supplementary4 == 2) THEN
+                    phy_INcon(phy_i) = _STATE_VAR_(data%zoops(zoop_i)%id_phyIN(phy_i))
+                    phy_IPcon(phy_i) = _STATE_VAR_(data%zoops(zoop_i)%id_phyIP(phy_i))
+                ! Does not simulate internal nutrients
+                ELSEIF (tvar%supplementary4 == 0) THEN
+                    phy_INcon(phy_i) = prey(phy_i) * tvar%supplementary1
+                    phy_IPcon(phy_i) = prey(phy_i) * tvar%supplementary2
+                ! Exit - simdynamics 1
+                ELSE
+                    STOP
+                END IF         
+            END IF
+            IF (prey(prey_i).NE.0.0) THEN
+                grazing_n = grazing_n + grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i) /14.0
+                grazing_p = grazing_p + grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i) /31.0
+            ENDIF
          ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:15).EQ.'aed_zooplankton') THEN
             grazing_n = grazing_n + grazing_prey(prey_i) * data%zoops(zoop_i)%INC_zoo
             grazing_p = grazing_p + grazing_prey(prey_i) * data%zoops(zoop_i)%IPC_zoo
@@ -671,12 +688,23 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
               ENDIF
           ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
             phy_i = phy_i + 1
-            _FLUX_VAR_(data%zoops(zoop_i)%id_phyIN(phy_i)) =                         &
-                      _FLUX_VAR_(data%zoops(zoop_i)%id_phyIN(phy_i)) +               &
-                      ( -1.0 * grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i))
-            _FLUX_VAR_(data%zoops(zoop_i)%id_phyIP(phy_i)) =                         &
-                      _FLUX_VAR_(data%zoops(zoop_i)%id_phyIP(phy_i)) +               &
-                       ( -1.0 * grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i))
+            IF (aed_get_var(data%zoops(zoop_i)%id_prey(prey_i),tvar)) THEN
+                ! Simulates internal nutrients
+                IF (tvar%supplementary4 == 2) THEN
+                    _FLUX_VAR_(data%zoops(zoop_i)%id_phyIN(phy_i)) =                         &
+                              _FLUX_VAR_(data%zoops(zoop_i)%id_phyIN(phy_i)) +               &
+                              ( -1.0 * grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i))
+                    _FLUX_VAR_(data%zoops(zoop_i)%id_phyIP(phy_i)) =                         &
+                              _FLUX_VAR_(data%zoops(zoop_i)%id_phyIP(phy_i)) +               &
+                               ( -1.0 * grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i))
+                ! Does not simulate internal nutrients
+                ELSEIF (tvar%supplementary4 == 0) THEN
+                    ! Do nothing
+                ! Exit - simdynamics 1
+                ELSE
+                    STOP
+                END IF         
+           END IF 
          ENDIF
       ENDDO
 
