@@ -74,6 +74,12 @@ MODULE aed_zooplankton
       INTEGER  :: id_DOupttarget
       INTEGER  :: id_tem, id_sal, id_oxy
       INTEGER  :: id_grz,id_resp,id_mort
+      ! Group diagnostics
+      INTEGER,ALLOCATABLE :: id_fT(:), id_fSal(:), id_fDO(:), id_fGrz(:)
+      INTEGER,ALLOCATABLE :: id_grz_poc(:), id_grz_pon(:), id_grz_pop(:)
+      INTEGER,ALLOCATABLE :: id_grz_phy_c(:,:), id_grz_phy_n(:,:), id_grz_phy_p(:,:) 
+      INTEGER,ALLOCATABLE :: id_grz_zoo_c(:,:), id_grz_zoo_n(:,:), id_grz_zoo_p(:,:) 
+
 
 
       !# Model parameters
@@ -204,9 +210,9 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
    INTEGER,INTENT(in)          :: list(*) !List of zooplankton groups to simulate
 !
 !LOCALS
-   INTEGER  :: status, dbsize
+   INTEGER  :: status, dbsize, prey_i, phy_i, zoo_i, phy_max, zoo_max
 
-   INTEGER  :: i,j,tfil,sort_i(MAX_ZOOP_PREY)
+   INTEGER  :: i,j,tfil,sort_i(MAX_ZOOP_PREY), ii
    AED_REAL :: Pzoo_prey(MAX_ZOOP_PREY)
 
    TYPE(zoop_param_t),ALLOCATABLE :: zoop_param(:)
@@ -232,9 +238,19 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
            ! BMT print *,'Unknown file type "',TRIM(dbase),'"'; status=1
     END SELECT
     IF (status /= 0) STOP ! BMT 'Error reading namelist zoop_params'
-
+        
     data%num_zoops = 0
     allocate(data%zoops(count))
+    IF ( diag_level >= 10 ) THEN
+       ALLOCATE(data%id_fT(count)) ; data%id_fT(:) = 0
+       ALLOCATE(data%id_fSal(count)) ; data%id_fSal(:) = 0
+       ALLOCATE(data%id_fDO(count)) ; data%id_fDO(:) = 0
+       ALLOCATE(data%id_fGrz(count)) ; data%id_fGrz(:) = 0 
+       ALLOCATE(data%id_grz_poc(count)) ; data%id_grz_poc(:) = 0 
+       ALLOCATE(data%id_grz_pon(count)) ; data%id_grz_pon(:) = 0 
+       ALLOCATE(data%id_grz_pop(count)) ; data%id_grz_pop(:) = 0 
+    ENDIF
+
     DO i=1,count
        IF ( list(i) < 1 .OR. list(i) > dbsize ) EXIT  !# bad index, exit the loop
        data%num_zoops = data%num_zoops + 1
@@ -283,6 +299,82 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
                               'mmolC/m**3', 'zooplankton',         &
                               zoop_param(list(i))%zoop_initial,    &
                               minimum=zoop_param(list(i))%min_zoo)
+       
+       ! Group specific diagnostic variables
+       IF ( diag_level >= 10 ) THEN
+          ! Growth controls
+          data%id_fT(i)    = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_fT'  , '-', 'fT (>0)')
+          data%id_fSal(i)  = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_fSal', '-', 'fSal (0-1+)')
+          data%id_fDO(i)   = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_fDO' , '-', 'fDO (0-1+)') 
+          data%id_fGrz(i)  = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_fGrz' , '-', 'fGrz (0-1+)') 
+          ! Mass flux tracking
+          ! Size phyto grazing arrays
+          phy_max = 0
+          zoo_max = 0
+          DO ii=1,count
+              phy_i = 0
+              zoo_i = 0
+              DO prey_i = 1,data%zoops(ii)%num_prey
+                  ! Particulate organic matter consumed 
+                  IF (data%zoops(ii)%prey(prey_i)%zoop_prey(1:3) .EQ. _OGMPOC_) THEN
+                  ELSEIF (data%zoops(ii)%prey(prey_i)%zoop_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
+                      phy_i = phy_i + 1
+                  ELSEIF (data%zoops(ii)%prey(prey_i)%zoop_prey(1:15).EQ.'aed_zooplankton') THEN
+                      zoo_i = zoo_i + 1
+                  ENDIF
+              ENDDO
+              phy_max = MAX(phy_max,phy_i)
+              zoo_max = MAX(zoo_max,zoo_i)
+          ENDDO
+          ALLOCATE(data%id_grz_zoo_c(count,zoo_max)) ; data%id_grz_zoo_c(:,:) = 0
+          ALLOCATE(data%id_grz_zoo_n(count,zoo_max)) ; data%id_grz_zoo_n(:,:) = 0
+          ALLOCATE(data%id_grz_zoo_p(count,zoo_max)) ; data%id_grz_zoo_p(:,:) = 0
+          ALLOCATE(data%id_grz_phy_c(count,phy_max)) ; data%id_grz_phy_c(:,:) = 0
+          ALLOCATE(data%id_grz_phy_n(count,phy_max)) ; data%id_grz_phy_n(:,:) = 0
+          ALLOCATE(data%id_grz_phy_p(count,phy_max)) ; data%id_grz_phy_p(:,:) = 0
+          ! Create diags
+          phy_i = 0
+          zoo_i = 0
+          DO prey_i = 1,data%zoops(i)%num_prey
+             ! Particulate organic matter consumed 
+             IF (data%zoops(i)%prey(prey_i)%zoop_prey(1:3) .EQ. _OGMPOC_) THEN
+                data%id_grz_poc(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_GRZ_POC','mmolC/m**3/d','grazing of POC')   
+                data%id_grz_pon(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_GRZ_PON','mmolN/m**3/d','grazing of PON')   
+                data%id_grz_pop(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_GRZ_POP','mmolP/m**3/d','grazing of POP')   
+             ELSEIF (data%zoops(i)%prey(prey_i)%zoop_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
+                 phy_i = phy_i + 1
+                 data%id_grz_phy_c(i,phy_i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_'//TRIM(data%zoops(i)%prey(prey_i)%zoop_prey)//'_GRZ_PHY_C','mmolC/m**3/d','grazing of phyto C')   
+                 data%id_grz_phy_n(i,phy_i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_'//TRIM(data%zoops(i)%prey(prey_i)%zoop_prey)//'_GRZ_PHY_N','mmolN/m**3/d','grazing of phyto N')   
+                 data%id_grz_phy_p(i,phy_i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_'//TRIM(data%zoops(i)%prey(prey_i)%zoop_prey)//'_GRZ_PHY_P','mmolP/m**3/d','grazing of phyto P')   
+             ELSEIF (data%zoops(i)%prey(prey_i)%zoop_prey(1:15).EQ.'aed_zooplankton') THEN
+                 zoo_i = zoo_i + 1
+                 data%id_grz_zoo_c(i,zoo_i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_'//TRIM(data%zoops(i)%prey(prey_i)%zoop_prey)//'_GRZ_ZOO_C','mmolC/m**3/d','grazing of zoo C')   
+                 data%id_grz_zoo_n(i,zoo_i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_'//TRIM(data%zoops(i)%prey(prey_i)%zoop_prey)//'_GRZ_ZOO_N','mmolN/m**3/d','grazing of zoo N')   
+                 data%id_grz_zoo_p(i,zoo_i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_'//TRIM(data%zoops(i)%prey(prey_i)%zoop_prey)//'_GRZ_ZOO_P','mmolP/m**3/d','grazing of zoo P')   
+             ENDIF
+          ENDDO
+          
+          
+          
+          
+          
+          
+          
+          
+          !data%id_PhyGPPc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_gpp_c', &
+          !                                               'mmol C/m3/d', 'group primary production')
+          !data%id_PhyRSPc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_rsp_c', &
+          !                                               'mmol C/m3/d', 'group respiration')
+          !data%id_PhyEXCc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_exc_c', &
+          !                                               'mmol C/m3/d', 'group excretion/exudation')
+          !data%id_PhyMORc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_mor_c', &
+          !                                               'mmol C/m3/d', 'group mortality')
+          !data%id_PhySEDc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_set_c', &
+          !                                               'mmol C/m3/d', 'group sedimentation')
+          !data%id_PhyGPPn(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_gpp_n', &
+          !                                               'mmol N/m3/d', 'group primary production')
+       ENDIF
+       
     ENDDO
 !
     DEALLOCATE(zoop_param)
@@ -433,7 +525,7 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
    INTEGER,INTENT(in) :: layer_idx
 !
 !LOCALS
-   INTEGER            :: zoop_i,prey_i,prey_j,phy_i
+   INTEGER            :: zoop_i,prey_i,prey_j,phy_i,zoo_i
    AED_REAL           :: zoo,temp,salinity,oxy !State variables
    AED_REAL           :: prey(MAX_ZOOP_PREY), grazing_prey(MAX_ZOOP_PREY) !Prey state variables
    AED_REAL           :: phy_INcon(MAX_ZOOP_PREY), phy_IPcon(MAX_ZOOP_PREY) !Internal nutrients for phytoplankton
@@ -549,14 +641,14 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
       phy_i = 0
           
       DO prey_i = 1,data%zoops(zoop_i)%num_prey
-         IF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey .EQ. _OGMPOC_) THEN
+         IF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:3) .EQ. _OGMPOC_) THEN
             IF (poc > zero_) THEN
                 grazing_n = grazing_n + grazing_prey(prey_i) * pon/poc
                 grazing_p = grazing_p + grazing_prey(prey_i) * pop/poc
             ELSE
                 grazing_n = zero_
                 grazing_p = zero_
-            ENDIF
+            ENDIF 
          ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
             phy_i = phy_i + 1
             IF (aed_get_var(data%zoops(zoop_i)%id_prey(prey_i),tvar)) THEN
@@ -574,8 +666,10 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
                 END IF         
             END IF
             IF (prey(prey_i).NE.0.0) THEN
-                grazing_n = grazing_n + grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i) /14.0
-                grazing_p = grazing_p + grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i) /31.0
+!                grazing_n = grazing_n + grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i) /14.0
+!                grazing_p = grazing_p + grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i) /31.0
+                grazing_n = grazing_n + grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i)
+                grazing_p = grazing_p + grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i)
             ENDIF
          ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:15).EQ.'aed_zooplankton') THEN
             grazing_n = grazing_n + grazing_prey(prey_i) * data%zoops(zoop_i)%INC_zoo
@@ -679,7 +773,7 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
          _FLUX_VAR_(data%zoops(zoop_i)%id_prey(prey_i)) =                            &
                        _FLUX_VAR_(data%zoops(zoop_i)%id_prey(prey_i)) +              &
                        ( -1.0 * grazing_prey(prey_i))
-          IF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey .EQ. _OGMPOC_) THEN
+          IF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:3) .EQ. _OGMPOC_) THEN
               IF (poc > zero_) THEN
                  _FLUX_VAR_(data%id_Nmorttarget) =     &
                           _FLUX_VAR_(data%id_Nmorttarget) + ( -1.0 * grazing_prey(prey_i) * pon/poc)
@@ -732,14 +826,58 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
          _FLUX_VAR_(data%id_Pmorttarget) = _FLUX_VAR_(data%id_Pmorttarget) + ( pop_excr)
       ENDIF
       ENDIF
+      
+      !------------------------------------------------------------------------+
+      ! Diagnostic info
+      ! Group diagnostics
+      phy_i = 0
+      zoo_i = 0
+      IF ( diag_level >= 10 ) THEN
+         ! Growth controls
+         _DIAG_VAR_(data%id_fT(zoop_i))    =  f_T
+         _DIAG_VAR_(data%id_fSal(zoop_i))  =  f_Salinity 
+         _DIAG_VAR_(data%id_fDO(zoop_i))   =  f_DO 
+         _DIAG_VAR_(data%id_fGrz(zoop_i))  =  fGrazing_Limitation 
+          DO prey_i = 1,data%zoops(zoop_i)%num_prey
+              ! OGM
+             IF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:3) .EQ. _OGMPOC_) THEN
+                IF (poc > zero_) THEN
+                    _DIAG_VAR_(data%id_grz_poc(zoop_i))  =  grazing_prey(prey_i)
+                    _DIAG_VAR_(data%id_grz_pon(zoop_i))  =  grazing_prey(prey_i) * pon/poc
+                    _DIAG_VAR_(data%id_grz_pop(zoop_i))  =  grazing_prey(prey_i) * pop/poc
+                ELSE
+                    _DIAG_VAR_(data%id_grz_poc(zoop_i))  =  zero_
+                    _DIAG_VAR_(data%id_grz_pon(zoop_i))  =  zero_
+                    _DIAG_VAR_(data%id_grz_pop(zoop_i))  =  zero_
+                ENDIF 
+             ! PHYTOS
+             ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
+                phy_i = phy_i + 1
+                IF (prey(prey_i).NE.0.0) THEN
+                    _DIAG_VAR_(data%id_grz_phy_c(zoop_i,phy_i))  =  grazing_prey(prey_i)
+                    _DIAG_VAR_(data%id_grz_phy_n(zoop_i,phy_i))  =  grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i)
+                    _DIAG_VAR_(data%id_grz_phy_p(zoop_i,phy_i))  =  grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i)
+                ENDIF
+             ! ZOOPS
+             ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:15).EQ.'aed_zooplankton') THEN
+                 zoo_i = zoo_i + 1
+                _DIAG_VAR_(data%id_grz_zoo_c(zoop_i,zoo_i))  =  grazing_prey(prey_i) 
+                _DIAG_VAR_(data%id_grz_zoo_n(zoop_i,zoo_i))  =  grazing_prey(prey_i) * data%zoops(zoop_i)%INC_zoo
+                _DIAG_VAR_(data%id_grz_zoo_p(zoop_i,zoo_i))  =  grazing_prey(prey_i) * data%zoops(zoop_i)%IPC_zoo
+             ENDIF
+          ENDDO
+      ENDIF      
 
-      ! Export diagnostic variables
-      _DIAG_VAR_(data%id_grz )  = zoo*grazing*secs_per_day
-      _DIAG_VAR_(data%id_resp ) = zoo*respiration*secs_per_day
-      _DIAG_VAR_(data%id_mort ) = zoo*mortality*secs_per_day
-
+      ! Summed diagnostics
+      _DIAG_VAR_(data%id_grz)  = _DIAG_VAR_(data%id_grz)  + zoo*grazing
+      _DIAG_VAR_(data%id_resp) = _DIAG_VAR_(data%id_resp) + zoo*respiration
+      _DIAG_VAR_(data%id_mort) = _DIAG_VAR_(data%id_mort) + zoo*mortality
    ENDDO
 
+   ! Export diagnostic variables
+   _DIAG_VAR_(data%id_grz)  = _DIAG_VAR_(data%id_grz)  * secs_per_day
+   _DIAG_VAR_(data%id_resp) = _DIAG_VAR_(data%id_resp) * secs_per_day
+   _DIAG_VAR_(data%id_mort) = _DIAG_VAR_(data%id_mort) * secs_per_day
 END SUBROUTINE aed_calculate_zooplankton
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
