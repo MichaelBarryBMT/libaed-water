@@ -353,26 +353,6 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
                  data%id_grz_zoo_p(i,zoo_i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_'//TRIM(data%zoops(i)%prey(prey_i)%zoop_prey)//'_GRZ_ZOO_P','mmolP/m**3/d','grazing of zoo P')   
              ENDIF
           ENDDO
-          
-          
-          
-          
-          
-          
-          
-          
-          !data%id_PhyGPPc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_gpp_c', &
-          !                                               'mmol C/m3/d', 'group primary production')
-          !data%id_PhyRSPc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_rsp_c', &
-          !                                               'mmol C/m3/d', 'group respiration')
-          !data%id_PhyEXCc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_exc_c', &
-          !                                               'mmol C/m3/d', 'group excretion/exudation')
-          !data%id_PhyMORc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_mor_c', &
-          !                                               'mmol C/m3/d', 'group mortality')
-          !data%id_PhySEDc(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_set_c', &
-          !                                               'mmol C/m3/d', 'group sedimentation')
-          !data%id_PhyGPPn(i) = aed_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_gpp_n', &
-          !                                               'mmol N/m3/d', 'group primary production')
        ENDIF
        
     ENDDO
