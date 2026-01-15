@@ -73,14 +73,16 @@ MODULE aed_zooplankton
       INTEGER  :: id_Cexctarget,id_Cmorttarget
       INTEGER  :: id_DOupttarget
       INTEGER  :: id_tem, id_sal, id_oxy
-      INTEGER  :: id_grz,id_resp,id_mort
+      INTEGER  :: id_grz,id_uptk,id_resp,id_mort
       ! Group diagnostics
       INTEGER,ALLOCATABLE :: id_fT(:), id_fSal(:), id_fDO(:), id_fGrz(:)
       INTEGER,ALLOCATABLE :: id_grz_poc(:), id_grz_pon(:), id_grz_pop(:)
       INTEGER,ALLOCATABLE :: id_grz_phy_c(:,:), id_grz_phy_n(:,:), id_grz_phy_p(:,:) 
       INTEGER,ALLOCATABLE :: id_grz_zoo_c(:,:), id_grz_zoo_n(:,:), id_grz_zoo_p(:,:) 
-
-
+      INTEGER,ALLOCATABLE :: id_ggrzc(:), id_ggrzn(:), id_ggrzp(:)
+      INTEGER,ALLOCATABLE :: id_gresp(:), id_gmort(:)
+      INTEGER,ALLOCATABLE :: id_gdcex(:), id_gdnex(:), id_gdpex(:)
+      INTEGER,ALLOCATABLE :: id_gpcex(:), id_gpnex(:), id_gppex(:)
 
       !# Model parameters
       INTEGER  :: num_zoops
@@ -242,10 +244,21 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
     data%num_zoops = 0
     allocate(data%zoops(count))
     IF ( diag_level >= 10 ) THEN
-       ALLOCATE(data%id_fT(count)) ; data%id_fT(:) = 0
-       ALLOCATE(data%id_fSal(count)) ; data%id_fSal(:) = 0
-       ALLOCATE(data%id_fDO(count)) ; data%id_fDO(:) = 0
-       ALLOCATE(data%id_fGrz(count)) ; data%id_fGrz(:) = 0 
+       ALLOCATE(data%id_fT(count))      ; data%id_fT(:)      = 0
+       ALLOCATE(data%id_fSal(count))    ; data%id_fSal(:)    = 0
+       ALLOCATE(data%id_fDO(count))     ; data%id_fDO(:)     = 0
+       ALLOCATE(data%id_fGrz(count))    ; data%id_fGrz(:)    = 0 
+       ALLOCATE(data%id_ggrzc(count))   ; data%id_ggrzc(:)   = 0 
+       ALLOCATE(data%id_ggrzn(count))   ; data%id_ggrzn(:)   = 0 
+       ALLOCATE(data%id_ggrzp(count))   ; data%id_ggrzp(:)   = 0 
+       ALLOCATE(data%id_gresp(count))   ; data%id_gresp(:)   = 0 
+       ALLOCATE(data%id_gmort(count))   ; data%id_gmort(:)   = 0 
+       ALLOCATE(data%id_gdcex(count))   ; data%id_gdcex(:)   = 0 
+       ALLOCATE(data%id_gdnex(count))   ; data%id_gdnex(:)   = 0 
+       ALLOCATE(data%id_gdpex(count))   ; data%id_gdpex(:)   = 0 
+       ALLOCATE(data%id_gpcex(count))   ; data%id_gpcex(:)   = 0 
+       ALLOCATE(data%id_gpnex(count))   ; data%id_gpnex(:)   = 0 
+       ALLOCATE(data%id_gppex(count))   ; data%id_gppex(:)   = 0 
        ALLOCATE(data%id_grz_poc(count)) ; data%id_grz_poc(:) = 0 
        ALLOCATE(data%id_grz_pon(count)) ; data%id_grz_pon(:) = 0 
        ALLOCATE(data%id_grz_pop(count)) ; data%id_grz_pop(:) = 0 
@@ -307,6 +320,18 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
           data%id_fSal(i)  = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_fSal', '-', 'fSal (0-1+)')
           data%id_fDO(i)   = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_fDO' , '-', 'fDO (0-1+)') 
           data%id_fGrz(i)  = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_fGrz' , '-', 'fGrz (0-1+)') 
+          ! Intake and waste
+          data%id_ggrzc(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_GZC_ZOO','mmolC/m**3/d','grazing of C by zoo')   
+          data%id_ggrzn(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_GZN_ZOO','mmolN/m**3/d','grazing of N by zoo')   
+          data%id_ggrzp(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_GZP_ZOO','mmolP/m**3/d','grazing of P by zoo')   
+          data%id_gresp(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_RSP_ZOO','mmolC/m**3/d','respirataion of zoo C')   
+          data%id_gmort(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_MOR_ZOO','mmolC/m**3/d','mortality of zoo C')   
+          data%id_gpcex(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_PCE_ZOO','mmolC/m**3/d','excretion of particulate zoo C')
+          data%id_gpnex(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_PNE_ZOO','mmolN/m**3/d','excretion of particulate zoo N')
+          data%id_gppex(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_PPE_ZOO','mmolP/m**3/d','excretion of particulate zoo P')
+          data%id_gdcex(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_DCE_ZOO','mmolC/m**3/d','excretion of dissolved zoo C')
+          data%id_gdnex(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_DNE_ZOO','mmolN/m**3/d','excretion of dissolved zoo N')
+          data%id_gdpex(i) = aed_define_diag_variable( TRIM(data%zoops(i)%zoop_name)//'_DPE_ZOO','mmolP/m**3/d','excretion of dissolved zoo P')
           ! Mass flux tracking
           ! Size phyto grazing arrays
           phy_max = 0
@@ -354,7 +379,6 @@ SUBROUTINE aed_zooplankton_load_params(data, dbase, count, list)
              ENDIF
           ENDDO
        ENDIF
-       
     ENDDO
 !
     DEALLOCATE(zoop_param)
@@ -482,9 +506,10 @@ SUBROUTINE aed_define_zooplankton(data, namlst)
 
 
    ! Register diagnostic variables
-   data%id_grz  = aed_define_diag_variable('grz','mmolC/m**3/d',  'net zooplankton grazing')
-   data%id_resp = aed_define_diag_variable('resp','mmolC/m**3/d',  'net zooplankton respiration')
-   data%id_mort = aed_define_diag_variable('mort','mmolC/m**3/d','net zooplankton mortality')
+   data%id_grz   = aed_define_diag_variable('grz','mmolC/m**3/d',  'net zooplankton grazing')
+   data%id_uptk  = aed_define_diag_variable('upt','mmolC/m**3/d',  'net zooplankton uptake')
+   data%id_resp  = aed_define_diag_variable('resp','mmolC/m**3/d',  'net zooplankton respiration')
+   data%id_mort  = aed_define_diag_variable('mort','mmolC/m**3/d','net zooplankton mortality')
 
    ! Register environmental dependencies
    data%id_tem = aed_locate_global('temperature')
@@ -846,16 +871,29 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
                 _DIAG_VAR_(data%id_grz_zoo_p(zoop_i,zoo_i))  =  grazing_prey(prey_i) * data%zoops(zoop_i)%IPC_zoo
              ENDIF
           ENDDO
+         _DIAG_VAR_(data%id_ggrzc(zoop_i))  =  zoo*grazing 
+         _DIAG_VAR_(data%id_ggrzn(zoop_i))  =  grazing_n 
+         _DIAG_VAR_(data%id_ggrzp(zoop_i))  =  grazing_p 
+         _DIAG_VAR_(data%id_gresp(zoop_i))  =  zoo*respiration 
+         _DIAG_VAR_(data%id_gmort(zoop_i))  =  zoo*mortality 
+         _DIAG_VAR_(data%id_gpcex(zoop_i))  =  poc_excr 
+         _DIAG_VAR_(data%id_gpnex(zoop_i))  =  pon_excr 
+         _DIAG_VAR_(data%id_gppex(zoop_i))  =  pop_excr 
+         _DIAG_VAR_(data%id_gdcex(zoop_i))  =  data%zoops(zoop_i)%fexcr_zoo * respiration * zoo + doc_excr 
+         _DIAG_VAR_(data%id_gdnex(zoop_i))  =  don_excr 
+         _DIAG_VAR_(data%id_gdpex(zoop_i))  =  dop_excr 
       ENDIF      
 
       ! Summed diagnostics
       _DIAG_VAR_(data%id_grz)  = _DIAG_VAR_(data%id_grz)  + zoo*grazing
+      _DIAG_VAR_(data%id_uptk) = _DIAG_VAR_(data%id_uptk) + zoo*grazing*(1 - data%zoops(zoop_i)%fassim_zoo)
       _DIAG_VAR_(data%id_resp) = _DIAG_VAR_(data%id_resp) + zoo*respiration
       _DIAG_VAR_(data%id_mort) = _DIAG_VAR_(data%id_mort) + zoo*mortality
    ENDDO
 
    ! Export diagnostic variables
    _DIAG_VAR_(data%id_grz)  = _DIAG_VAR_(data%id_grz)  * secs_per_day
+   _DIAG_VAR_(data%id_uptk) = _DIAG_VAR_(data%id_uptk) * secs_per_day
    _DIAG_VAR_(data%id_resp) = _DIAG_VAR_(data%id_resp) * secs_per_day
    _DIAG_VAR_(data%id_mort) = _DIAG_VAR_(data%id_mort) * secs_per_day
 END SUBROUTINE aed_calculate_zooplankton
