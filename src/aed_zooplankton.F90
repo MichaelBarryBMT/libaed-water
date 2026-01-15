@@ -542,12 +542,14 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
    AED_REAL           :: grazing_n, grazing_p !Grazing on nutrients
    AED_REAL           :: pon_excr, pop_excr, poc_excr !POM excretion rates
    AED_REAL           :: don_excr, dop_excr, doc_excr, delta_C !DOM excretion rates
+   AED_REAL           :: dt !temporary hardwire
    TYPE(aed_variable_t),POINTER :: tvar
 
 !
 !-------------------------------------------------------------------------------
 !BEGIN
    pon = 0.0 ; poc = 0.0 ; pop = 0.0  !## CAB [-Wmaybe-uninitialized]
+   dt = 900.0 ! TEMPORARY HARDWIRE
 
    ! Retrieve current environmental conditions.
    temp = _STATE_VAR_(data%id_tem)      ! local temperature
@@ -562,6 +564,11 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
    IF (data%simPNexcr)  pon = _STATE_VAR_(data%id_Nmorttarget)
    IF (data%simPPexcr)  pop = _STATE_VAR_(data%id_Pmorttarget)
    IF (data%simPCexcr)  poc = _STATE_VAR_(data%id_Cmorttarget)
+   
+   _DIAG_VAR_(data%id_grz)  = zero_
+   _DIAG_VAR_(data%id_uptk) = zero_
+   _DIAG_VAR_(data%id_resp) = zero_
+   _DIAG_VAR_(data%id_mort) = zero_
 
    DO zoop_i=1,data%num_zoops
 
@@ -600,8 +607,8 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
       IF (Ctotal_prey < data%zoops(zoop_i)%num_prey * data%zoops(zoop_i)%Cmin_grz_zoo ) THEN
           food = zero_
           grazing = zero_
-      ELSEIF (food > Ctotal_prey - data%zoops(zoop_i)%num_prey * data%zoops(zoop_i)%Cmin_grz_zoo ) THEN
-          food = Ctotal_prey - data%zoops(zoop_i)%num_prey * data%zoops(zoop_i)%Cmin_grz_zoo
+      ELSEIF (food > (Ctotal_prey - data%zoops(zoop_i)%num_prey * data%zoops(zoop_i)%Cmin_grz_zoo)/dt ) THEN
+          food = (Ctotal_prey - data%zoops(zoop_i)%num_prey * data%zoops(zoop_i)%Cmin_grz_zoo)/dt
           grazing = food / zoo
       ENDIF
 
@@ -620,12 +627,14 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
           DO prey_j = prey_i,data%zoops(zoop_i)%num_prey
              pref_factor = pref_factor + data%zoops(zoop_i)%prey(prey_j)%Pzoo_prey
           ENDDO
-          IF (food * data%zoops(zoop_i)%prey(prey_i)%Pzoo_prey / pref_factor <= &
-                        prey(prey_i) - data%zoops(zoop_i)%Cmin_grz_zoo) THEN
+          IF (pref_factor.eq.0.0) THEN 
+             grazing_prey(prey_i) = zero_
+          ELSEIF (food * data%zoops(zoop_i)%prey(prey_i)%Pzoo_prey / pref_factor <= &
+                        (prey(prey_i) - data%zoops(zoop_i)%Cmin_grz_zoo)/dt) THEN
              !Take fraction of left over food based on preference factor
              grazing_prey(prey_i) = food * data%zoops(zoop_i)%prey(prey_i)%Pzoo_prey / pref_factor
           ELSEIF (prey(prey_i) > data%zoops(zoop_i)%Cmin_grz_zoo) THEN
-             grazing_prey(prey_i) = prey(prey_i) - data%zoops(zoop_i)%Cmin_grz_zoo
+             grazing_prey(prey_i) = (prey(prey_i) - data%zoops(zoop_i)%Cmin_grz_zoo)/dt
           ELSE
              grazing_prey(prey_i) = zero_
           ENDIF
@@ -847,46 +856,50 @@ SUBROUTINE aed_calculate_zooplankton(data,column,layer_idx)
               ! OGM
              IF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:3) .EQ. _OGMPOC_) THEN
                 IF (poc > zero_) THEN
-                    _DIAG_VAR_(data%id_grz_poc(zoop_i))  =  grazing_prey(prey_i)
-                    _DIAG_VAR_(data%id_grz_pon(zoop_i))  =  grazing_prey(prey_i) * pon/poc
-                    _DIAG_VAR_(data%id_grz_pop(zoop_i))  =  grazing_prey(prey_i) * pop/poc
+                    _DIAG_VAR_(data%id_grz_poc(zoop_i))  =  grazing_prey(prey_i)  * secs_per_day
+                    _DIAG_VAR_(data%id_grz_pon(zoop_i))  =  grazing_prey(prey_i) * pon/poc  * secs_per_day
+                    _DIAG_VAR_(data%id_grz_pop(zoop_i))  =  grazing_prey(prey_i) * pop/poc  * secs_per_day
                 ELSE
-                    _DIAG_VAR_(data%id_grz_poc(zoop_i))  =  zero_
-                    _DIAG_VAR_(data%id_grz_pon(zoop_i))  =  zero_
-                    _DIAG_VAR_(data%id_grz_pop(zoop_i))  =  zero_
+                    _DIAG_VAR_(data%id_grz_poc(zoop_i))  =  zero_  * secs_per_day
+                    _DIAG_VAR_(data%id_grz_pon(zoop_i))  =  zero_  * secs_per_day
+                    _DIAG_VAR_(data%id_grz_pop(zoop_i))  =  zero_  * secs_per_day
                 ENDIF 
              ! PHYTOS
              ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
                 phy_i = phy_i + 1
                 IF (prey(prey_i).NE.0.0) THEN
-                    _DIAG_VAR_(data%id_grz_phy_c(zoop_i,phy_i))  =  grazing_prey(prey_i)
-                    _DIAG_VAR_(data%id_grz_phy_n(zoop_i,phy_i))  =  grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i)
-                    _DIAG_VAR_(data%id_grz_phy_p(zoop_i,phy_i))  =  grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i)
+                    _DIAG_VAR_(data%id_grz_phy_c(zoop_i,phy_i))  =  grazing_prey(prey_i)  * secs_per_day
+                    _DIAG_VAR_(data%id_grz_phy_n(zoop_i,phy_i))  =  grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i)  * secs_per_day
+                    _DIAG_VAR_(data%id_grz_phy_p(zoop_i,phy_i))  =  grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i)  * secs_per_day
+                ELSE 
+                    _DIAG_VAR_(data%id_grz_phy_c(zoop_i,phy_i))  =  zero_ 
+                    _DIAG_VAR_(data%id_grz_phy_n(zoop_i,phy_i))  =  zero_ 
+                    _DIAG_VAR_(data%id_grz_phy_p(zoop_i,phy_i))  =  zero_ 
                 ENDIF
              ! ZOOPS
              ELSEIF (data%zoops(zoop_i)%prey(prey_i)%zoop_prey(1:15).EQ.'aed_zooplankton') THEN
                  zoo_i = zoo_i + 1
-                _DIAG_VAR_(data%id_grz_zoo_c(zoop_i,zoo_i))  =  grazing_prey(prey_i) 
-                _DIAG_VAR_(data%id_grz_zoo_n(zoop_i,zoo_i))  =  grazing_prey(prey_i) * data%zoops(zoop_i)%INC_zoo
-                _DIAG_VAR_(data%id_grz_zoo_p(zoop_i,zoo_i))  =  grazing_prey(prey_i) * data%zoops(zoop_i)%IPC_zoo
+                _DIAG_VAR_(data%id_grz_zoo_c(zoop_i,zoo_i))  =  grazing_prey(prey_i)   * secs_per_day
+                _DIAG_VAR_(data%id_grz_zoo_n(zoop_i,zoo_i))  =  grazing_prey(prey_i) * data%zoops(zoop_i)%INC_zoo  * secs_per_day
+                _DIAG_VAR_(data%id_grz_zoo_p(zoop_i,zoo_i))  =  grazing_prey(prey_i) * data%zoops(zoop_i)%IPC_zoo  * secs_per_day
              ENDIF
           ENDDO
-         _DIAG_VAR_(data%id_ggrzc(zoop_i))  =  zoo*grazing 
-         _DIAG_VAR_(data%id_ggrzn(zoop_i))  =  grazing_n 
-         _DIAG_VAR_(data%id_ggrzp(zoop_i))  =  grazing_p 
-         _DIAG_VAR_(data%id_gresp(zoop_i))  =  zoo*respiration 
-         _DIAG_VAR_(data%id_gmort(zoop_i))  =  zoo*mortality 
-         _DIAG_VAR_(data%id_gpcex(zoop_i))  =  poc_excr 
-         _DIAG_VAR_(data%id_gpnex(zoop_i))  =  pon_excr 
-         _DIAG_VAR_(data%id_gppex(zoop_i))  =  pop_excr 
-         _DIAG_VAR_(data%id_gdcex(zoop_i))  =  data%zoops(zoop_i)%fexcr_zoo * respiration * zoo + doc_excr 
-         _DIAG_VAR_(data%id_gdnex(zoop_i))  =  don_excr 
-         _DIAG_VAR_(data%id_gdpex(zoop_i))  =  dop_excr 
+         _DIAG_VAR_(data%id_ggrzc(zoop_i))  =  zoo*grazing  * secs_per_day
+         _DIAG_VAR_(data%id_ggrzn(zoop_i))  =  grazing_n  * secs_per_day 
+         _DIAG_VAR_(data%id_ggrzp(zoop_i))  =  grazing_p  * secs_per_day 
+         _DIAG_VAR_(data%id_gresp(zoop_i))  =  zoo*respiration  * secs_per_day 
+         _DIAG_VAR_(data%id_gmort(zoop_i))  =  zoo*mortality  * secs_per_day 
+         _DIAG_VAR_(data%id_gpcex(zoop_i))  =  poc_excr  * secs_per_day 
+         _DIAG_VAR_(data%id_gpnex(zoop_i))  =  pon_excr  * secs_per_day 
+         _DIAG_VAR_(data%id_gppex(zoop_i))  =  pop_excr  * secs_per_day 
+         _DIAG_VAR_(data%id_gdcex(zoop_i))  =  (data%zoops(zoop_i)%fexcr_zoo * respiration * zoo + doc_excr)   * secs_per_day 
+         _DIAG_VAR_(data%id_gdnex(zoop_i))  =  don_excr  * secs_per_day 
+         _DIAG_VAR_(data%id_gdpex(zoop_i))  =  dop_excr  * secs_per_day 
       ENDIF      
 
       ! Summed diagnostics
       _DIAG_VAR_(data%id_grz)  = _DIAG_VAR_(data%id_grz)  + zoo*grazing
-      _DIAG_VAR_(data%id_uptk) = _DIAG_VAR_(data%id_uptk) + zoo*grazing*(1 - data%zoops(zoop_i)%fassim_zoo)
+      _DIAG_VAR_(data%id_uptk) = _DIAG_VAR_(data%id_uptk) + zoo*grazing*(data%zoops(zoop_i)%fassim_zoo)
       _DIAG_VAR_(data%id_resp) = _DIAG_VAR_(data%id_resp) + zoo*respiration
       _DIAG_VAR_(data%id_mort) = _DIAG_VAR_(data%id_mort) + zoo*mortality
    ENDDO
