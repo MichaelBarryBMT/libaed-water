@@ -30,7 +30,7 @@ srcdir=src
 incdir=include
 
 ifeq ($(F90),)
-  F90=gfortran
+  F90=ifx
 endif
 ifeq ($(MDEBUG),true)
   DEBUG=true
@@ -61,6 +61,20 @@ ifeq ($(F90),ifort)
     FFLAGS+=-real-size 32
   else
     FFLAGS+=-real-size 64
+  endif
+else ifeq ($(F90),ifx)
+  INCLUDES+=-I/opt/intel/include
+  DEBUG_FFLAGS=-g -traceback
+  OPT_FFLAGS=-O3
+  FFLAGS=-fPIC -warn all -module ${moddir} -free -stand f08 -diag-disable=7712,11021 -assume protect_parens $(DEFINES) $(INCLUDES) 
+  FFLAGS+=-module ../libaed-water/mod
+  ifeq ($(WITH_CHECKS),true)
+	FFLAGS+=-check all -check noarg_temp_created
+  endif
+  ifeq ($(SINGLE),true)
+	FFLAGS+=-real-size 32
+  else
+	FFLAGS+=-real-size 64
   endif
 else ifeq ($(F90),pgfortran)
   DEBUG_FFLAGS=-g
