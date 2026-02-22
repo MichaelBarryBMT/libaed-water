@@ -803,8 +803,15 @@ SUBROUTINE aed_mobility_pathogens(data,column,layer_idx,mobility)
    temp = _STATE_VAR_(data%id_tem)
    dz = _STATE_VAR_(data%id_dz)
 
-   _DIAG_VAR_(data%id_pth_f_sed) = zero_
-   _DIAG_VAR_(data%id_pth_d_sed) = zero_
+   !   _DIAG_VAR_(data%id_pth_f_sed) = zero_
+   do pth_i = 1, size(data%id_pth_f_sed)
+      column(data%id_pth_f_sed(pth_i))%cell(layer_idx) = zero_
+   end do
+   !   _DIAG_VAR_(data%id_pth_d_sed) = zero_   
+   do pth_i = 1, size(data%id_pth_d_sed)
+      column(data%id_pth_d_sed(pth_i))%cell(layer_idx) = zero_
+   end do
+
 
    ! First set velocity for free pathogen groups
    DO pth_i=1,data%num_pathogens
