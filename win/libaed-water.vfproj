@@ -5,7 +5,7 @@
 		<Platform Name="x64"/>
 	</Platforms>
 	<Configurations>
-		<Configuration Name="Debug|Win32" UseCompiler="ifortCompiler" OutputDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)\$(ProjectName)" ConfigurationType="typeStaticLibrary">
+		<Configuration Name="Debug|Win32" UseCompiler="ifxCompiler" OutputDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)\$(ProjectName)" ConfigurationType="typeStaticLibrary">
 			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\src\;..\include\;.\$(PlatformName)-$(ConfigurationName)\;.\mods\$(PlatformName)\" F2003Semantics="true" WarnInterfaces="true" RealKIND="realKIND8" Traceback="true" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
 			<Tool Name="VFLibrarianTool" LinkLibraryDependencies="true"/>
 			<Tool Name="VFResourceCompilerTool"/>
@@ -15,7 +15,7 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration Name="Release|Win32" UseCompiler="ifortCompiler" OutputDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)\$(ProjectName)" ConfigurationType="typeStaticLibrary">
+		<Configuration Name="Release|Win32" UseCompiler="ifxCompiler" OutputDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)\$(ProjectName)" ConfigurationType="typeStaticLibrary">
 			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\src\;..\include\;.\$(PlatformName)-$(ConfigurationName)\;.\mods\$(PlatformName)\" F2003Semantics="true" RealKIND="realKIND8"/>
 			<Tool Name="VFLibrarianTool" LinkLibraryDependencies="true"/>
 			<Tool Name="VFResourceCompilerTool"/>
@@ -25,7 +25,7 @@
 			<Tool Name="VFPreBuildEventTool"/>
 			<Tool Name="VFPostBuildEventTool"/>
 		</Configuration>
-		<Configuration Name="Debug|x64" UseCompiler="ifortCompiler" OutputDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)\$(ProjectName)" ConfigurationType="typeStaticLibrary">
+		<Configuration Name="Debug|x64" UseCompiler="ifxCompiler" OutputDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(SolutionDir)\$(PlatformName)-$(ConfigurationName)\$(ProjectName)" ConfigurationType="typeStaticLibrary">
 			<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\src\;..\include\;.\$(PlatformName)-$(ConfigurationName)\;.\mods\$(PlatformName)\" F2003Semantics="true" WarnInterfaces="true" RealKIND="realKIND8" Traceback="true" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
 			<Tool Name="VFLibrarianTool" LinkLibraryDependencies="true"/>
 			<Tool Name="VFResourceCompilerTool"/>
